@@ -56,7 +56,7 @@
 //     process.exit(1);
 //   });
 
-// server.js
+// backend/server.js
 require('dotenv').config();
 
 const express = require('express');
@@ -67,12 +67,14 @@ const fs = require('fs');
 
 const authRoutes = require('./routes/authRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const adminRoutes = require('./routes/admin/adminRoutes'); 
+
 
 const app = express();
 
-// Enhanced CORS Configuration
+// CORS Configuration - Allow frontend ports
 app.use(cors({
-  origin: ['http://localhost:2020', 'http://127.0.0.1:2020', 'http://localhost', 'http://localhost:8080'],
+  origin: ['http://localhost:2020', 'http://127.0.0.1:2020', 'http://localhost:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -81,10 +83,10 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files for uploaded profile images
+// Serve static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Create uploads directory if it doesn't exist
+// Create uploads directory
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
@@ -92,19 +94,24 @@ if (!fs.existsSync('uploads/profiles')) {
   fs.mkdirSync('uploads/profiles', { recursive: true });
 }
 
-// Routes
+
+
+// ✅ Routes - Order matters!
+app.use('/api/admin', adminRoutes);  
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 
-// Test route to check if server is running
+
+
+// Test route
 app.get('/api/test', (req, res) => {
   res.json({ 
     message: 'Server is running!',
     port: process.env.PORT || 8080,
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    timestamp: new Date().toISOString()
   });
 });
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -129,24 +136,19 @@ const PORT = process.env.PORT || 8080;
 console.log('🚀 Starting server...');
 console.log('📡 Port:', PORT);
 console.log('🗄️  MongoDB URI:', process.env.MONGO_URI ? 'Set' : 'Not set');
-console.log('📁 Uploads directory:', path.join(__dirname, 'uploads/profiles'));
 
-// ✅ FIXED: Remove deprecated options
 mongoose.connect(process.env.MONGO_URI)
 .then(() => {
   console.log('✅ MongoDB Connected successfully.');
   app.listen(PORT, () => {
     console.log(`✅ Server running on port ${PORT}`);
     console.log(`📍 http://localhost:${PORT}`);
-    console.log(`📍 http://127.0.0.1:${PORT}`);
     console.log(`🧪 Test route: http://localhost:${PORT}/api/test`);
-    console.log(`👤 Profile route: http://localhost:${PORT}/api/profile`);
+    console.log(`👤 Admin route: http://localhost:${PORT}/api/admin`);
     console.log(`🔐 Auth route: http://localhost:${PORT}/api/auth`);
   });
 })
 .catch((err) => {
   console.error('❌ Database connection error:', err.message);
-  console.error('Please make sure MongoDB is running.');
-  console.error('Try: mongod --dbpath /path/to/data');
   process.exit(1);
 });
