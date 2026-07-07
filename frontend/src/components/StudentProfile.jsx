@@ -5,12 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import profileService from '../services/profileService';
 import logo from '../assets/logo.png';
 import {
-  Mail, Phone, MapPin, Award, Star, Settings, LogOut, Edit2, Save, X,
+  Mail, Phone, MapPin, Award, Star,  LogOut, Edit2, Save, X,
   Camera, ChevronRight, BookOpen, Dumbbell, ClipboardCheck, Flame,
   TrendingUp, BarChart3, Clock, CheckCircle, Trophy, Medal, Target,
-  Heart, GraduationCap, Bell, Lock, Moon, Globe, Smartphone, Trash2,
-  RefreshCw, AlertCircle, Loader, ChevronDown, User, HelpCircle,
-  Check, Volume2, Calendar, Zap, Brain
+  Heart, GraduationCap, Trash2,RefreshCw, AlertCircle, Loader, 
+  ChevronDown, User, HelpCircle,Brain,School
 } from 'lucide-react';
 
 const INK = '#1C2B39';
@@ -454,9 +453,7 @@ const StudentProfile = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${MOSS}15`, color: MOSS, fontFamily: FONT_MONO }}>
-              🎓 Student
-            </span>
+            
           </div>
           <div className="flex items-center gap-2.5">
             {isEditing ? (
@@ -529,8 +526,7 @@ const StudentProfile = () => {
                 <FieldRow icon={<Phone className="w-3.5 h-3.5 shrink-0" />} name="phone" value={formData.phone} editing={isEditing} />
                 <FieldRow icon={<MapPin className="w-3.5 h-3.5 shrink-0" />} name="location" value={formData.location} editing={isEditing} />
                 <FieldRow icon={<GraduationCap className="w-3.5 h-3.5 shrink-0" />} name="grade" value={formData.grade} editing={isEditing} />
-                <FieldRow icon={<GraduationCap className="w-3.5 h-3.5 shrink-0" />} name="classGroup" value={formData.classGroup} editing={isEditing} />
-                <FieldRow icon={<BookOpen className="w-3.5 h-3.5 shrink-0" />} name="school" value={formData.school} editing={isEditing} />
+                <FieldRow icon={<School className="w-3.5 h-3.5 shrink-0" />} name="school" value={formData.school} editing={isEditing} />
               </div>
 
               {isEditing ? (

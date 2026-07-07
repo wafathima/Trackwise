@@ -1,8 +1,7 @@
 // src/components/ParentDashboard.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Heart, 
-  Activity, 
   BookOpen,  
   Award,  
   Clock, 
@@ -24,7 +23,10 @@ import {
   Moon,
   Eye,
   FileText,
+  Loader
 } from 'lucide-react';
+import parentService from '../services/parentService';
+import { useAuth } from '../context/AuthContext';
 
 /* ---------------------------------------------------------------------- */
 /*  TOKENS                                                                 */
@@ -67,84 +69,130 @@ const TAB_ICONS = {
 /*  PARENT DASHBOARD                                                       */
 /* ---------------------------------------------------------------------- */
 const ParentDashboard = ({ user }) => {
+  const { user: authUser } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedChild, setSelectedChild] = useState(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [expandedSection, setExpandedSection] = useState(null);
   const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [childrenProfiles, setChildrenProfiles] = useState([]);
+  const [familyStats, setFamilyStats] = useState({
+    totalChildren: 0,
+    averageDiscipline: 0,
+    totalAchievements: 0,
+    totalStreak: 0,
+    activeChildren: 0,
+    consistencyScore: 0
+  });
+  const [reportData, setReportData] = useState({
+    childId: '',
+    week: '',
+    reportType: 'summary'
+  });
+  const [recentActivities, setRecentActivities] = useState([]);
+  const [familyGoals, setFamilyGoals] = useState([]);
 
-  // Mock data - In production, fetch from API
-  const [childrenProfiles] = useState([
-    { 
-      id: 1,
-      name: "Alex Mercer", 
-      class: "10th", 
-      disciplineScore: 87, 
-      waterIntake: "1.8L / 2.5L", 
-      sleep: "7.5 hrs", 
-      studyStreak: 5,
-      workoutStreak: 3,
-      attendance: 95,
-      achievements: ['Study Master', 'Fitness Beginner', 'Consistency Star'],
-      weeklyStudyHours: [4.5, 5.2, 3.8, 6.0, 4.2, 5.5, 4.0],
-      weeklyWorkouts: [true, true, false, true, true, false, true],
-      dailyHabits: [
-        { name: 'Morning Study', completed: true, time: '7:00 AM' },
-        { name: 'Exercise', completed: true, time: '4:00 PM' },
-        { name: 'Reading', completed: false, time: '8:00 PM' },
-        { name: 'Meditation', completed: true, time: '9:30 PM' }
-      ],
-      subjects: [
-        { name: 'Mathematics', score: 88, progress: 85 },
-        { name: 'Physics', score: 92, progress: 90 },
-        { name: 'Chemistry', score: 78, progress: 75 },
-        { name: 'English', score: 85, progress: 80 }
-      ],
-      notifications: [
-        { id: 1, message: 'Alex completed 5 study sessions this week!', type: 'achievement', date: 'Jan 15' },
-        { id: 2, message: 'Alex scored 92% in Physics test', type: 'score', date: 'Jan 14' },
-        { id: 3, message: 'Study streak: 5 days! Keep going!', type: 'streak', date: 'Jan 13' }
-      ]
-    },
-    { 
-      id: 2,
-      name: "Sarah Mercer", 
-      class: "8th", 
-      disciplineScore: 92, 
-      waterIntake: "2.0L / 2.5L", 
-      sleep: "8.0 hrs", 
-      studyStreak: 7,
-      workoutStreak: 5,
-      attendance: 98,
-      achievements: ['Math Whiz', 'Fitness Star', 'Perfect Attendance'],
-      weeklyStudyHours: [5.0, 4.8, 5.5, 6.2, 5.8, 4.5, 5.2],
-      weeklyWorkouts: [true, true, true, true, true, true, true],
-      dailyHabits: [
-        { name: 'Morning Study', completed: true, time: '6:30 AM' },
-        { name: 'Exercise', completed: true, time: '5:00 PM' },
-        { name: 'Reading', completed: true, time: '8:30 PM' },
-        { name: 'Meditation', completed: true, time: '9:00 PM' }
-      ],
-      subjects: [
-        { name: 'Mathematics', score: 95, progress: 92 },
-        { name: 'Science', score: 90, progress: 88 },
-        { name: 'English', score: 88, progress: 85 },
-        { name: 'Social Studies', score: 85, progress: 82 }
-      ],
-      notifications: [
-        { id: 1, message: 'Sarah earned "Math Whiz" badge!', type: 'achievement', date: 'Jan 16' },
-        { id: 2, message: 'Perfect attendance this week!', type: 'achievement', date: 'Jan 15' }
-      ]
+  // Fetch data on mount
+  useEffect(() => {
+    fetchParentData();
+  }, []);
+
+  const fetchParentData = async () => {
+    setLoading(true);
+    setToast(null);
+    try {
+      // Fetch all data in parallel
+      const [childrenData, statsData, activitiesData] = await Promise.all([
+        parentService.getChildren(),
+        parentService.getFamilyStats(),
+        parentService.getRecentActivities()
+      ]);
+      
+      // Set children profiles
+      setChildrenProfiles(childrenData || []);
+      
+      // Set family stats
+      if (statsData) {
+        setFamilyStats({
+          totalChildren: statsData.totalChildren || 0,
+          averageDiscipline: statsData.avgDiscipline || 0,
+          totalAchievements: statsData.totalAchievements || 0,
+          totalStreak: statsData.maxStreak || 0,
+          activeChildren: statsData.activeChildren || 0,
+          consistencyScore: statsData.consistencyScore || 0
+        });
+      }
+      
+      // Set recent activities
+      if (activitiesData) {
+        setRecentActivities(activitiesData);
+      } else {
+        // Set default activities if none
+        setRecentActivities([
+          { child: 'System', action: 'Welcome to your dashboard!', time: 'Just now' }
+        ]);
+      }
+
+      // Set family goals based on children data
+      if (childrenData && childrenData.length > 0) {
+        const goals = [
+          { 
+            title: 'Improve overall discipline score', 
+            progress: Math.round(childrenData.reduce((acc, c) => acc + (c.disciplineScore || 0), 0) / childrenData.length),
+            target: 90 
+          },
+          { 
+            title: 'Increase study streaks', 
+            progress: Math.round(childrenData.reduce((acc, c) => acc + (c.studyStreak || 0), 0) / childrenData.length * 10),
+            target: 50 
+          },
+          { 
+            title: 'Maintain workout consistency', 
+            progress: Math.round(childrenData.reduce((acc, c) => acc + (c.workoutStreak || 0), 0) / childrenData.length * 15),
+            target: 95 
+          }
+        ];
+        setFamilyGoals(goals);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching parent data:', error);
+      setToast({ 
+        message: error.response?.data?.message || 'Failed to load data. Please try again.', 
+        type: 'error' 
+      });
+    } finally {
+      setLoading(false);
     }
-  ]);
-
-  // Stats calculations
-  const stats = {
-    totalChildren: childrenProfiles.length,
-    averageDiscipline: Math.round(childrenProfiles.reduce((acc, c) => acc + c.disciplineScore, 0) / childrenProfiles.length),
-    totalAchievements: childrenProfiles.reduce((acc, c) => acc + c.achievements.length, 0),
-    totalStreak: Math.max(...childrenProfiles.map(c => c.studyStreak))
   };
+
+  const handleGenerateReport = async () => {
+    if (!reportData.childId) {
+      setToast({ message: 'Please select a child', type: 'error' });
+      return;
+    }
+
+    try {
+      const result = await parentService.generateReport(reportData.childId, {
+        reportType: reportData.reportType,
+        week: reportData.week
+      });
+      setToast({ message: 'Report generated successfully!', type: 'success' });
+      setShowReportModal(false);
+      setReportData({ childId: '', week: '', reportType: 'summary' });
+      
+      // In a real app, you would trigger a download here
+      if (result.reportUrl) {
+        window.open(result.reportUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Error generating report:', error);
+      setToast({ message: 'Failed to generate report', type: 'error' });
+    }
+  };
+
+  const stats = familyStats;
 
   /* -------------------------- Utility Functions -------------------------- */
   const getDisciplineLevel = (score) => {
@@ -176,7 +224,7 @@ const ParentDashboard = ({ user }) => {
   const tabAccent = TAB_ACCENTS[activeTab];
 
   /* -------------------------- Sub-Components -------------------------- */
-  const Toast = ({ message, type, onClose }) => (
+  const ToastComponent = ({ message, type, onClose }) => (
     <div
       className="fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded shadow-lg border"
       style={{ 
@@ -239,10 +287,11 @@ const ParentDashboard = ({ user }) => {
     </div>
   );
 
-  const Stamp = ({ children, accent, filled = true, onClick }) => (
+  const Stamp = ({ children, accent, filled = true, onClick, disabled = false }) => (
     <button
       onClick={onClick}
-      className="px-4 py-2 rounded-sm text-xs transition"
+      disabled={disabled}
+      className={`px-4 py-2 rounded-sm text-xs transition ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       style={{
         fontFamily: FONT_MONO,
         letterSpacing: '0.06em',
@@ -292,29 +341,6 @@ const ParentDashboard = ({ user }) => {
     </div>
   );
 
-  const Chip = ({ active, accent, onClick, children }) => (
-    <button
-      onClick={onClick}
-      className="px-3 py-1.5 rounded-full text-xs transition"
-      style={
-        active
-          ? { 
-              backgroundColor: `${accent}17`, 
-              color: accent, 
-              fontFamily: FONT_MONO, 
-              boxShadow: `inset 0 0 0 1px ${accent}44` 
-            }
-          : { 
-              backgroundColor: 'transparent', 
-              color: `${INK}70`, 
-              fontFamily: FONT_MONO 
-            }
-      }
-    >
-      {children}
-    </button>
-  );
-
   /* -------------------------- Discipline Gauge -------------------------- */
   const GaugeDial = ({ score, color }) => {
     const cx = 70, cy = 74, r = 56, sw = 9;
@@ -346,6 +372,17 @@ const ParentDashboard = ({ user }) => {
   };
 
   const level = getDisciplineLevel(stats.averageDiscipline);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: PAPER }}>
+        <div className="text-center">
+          <Loader className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: SLATE }} />
+          <p className="mt-4 text-sm" style={{ color: `${INK}70` }}>Loading family dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -390,7 +427,7 @@ const ParentDashboard = ({ user }) => {
         </div>
       </div>
 
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && <ToastComponent message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="pl-11 pr-5 md:pr-8 py-6 space-y-6">
         {/* Title page / header */}
@@ -404,7 +441,7 @@ const ParentDashboard = ({ user }) => {
                 fontSize: '1.9rem' 
               }}>
                 <Heart className="w-5 h-5" style={{ color: REDINK }} />
-                Welcome back, {user?.name || 'Parent'}
+                Welcome back, {authUser?.name || 'Parent'}
               </h3>
               <p className="text-sm mt-2" style={{ color: `${INK}80` }}>
                 <span style={{ fontFamily: FONT_MONO, color: level.color }}>{level.label}</span> family discipline &middot; {stats.totalChildren} child{stats.totalChildren > 1 ? 'ren' : ''} enrolled
@@ -501,203 +538,222 @@ const ParentDashboard = ({ user }) => {
                   title="Children Overview" 
                   accent={BRASS} 
                 />
-                {childrenProfiles.map((child) => {
-                  const discipline = getDisciplineLevel(child.disciplineScore);
-                  const isExpanded = expandedSection === `child-${child.id}`;
-                  
-                  return (
-                    <div 
-                      key={child.id} 
-                      className="rounded-sm border transition-shadow hover:shadow-sm"
-                      style={{ 
-                        backgroundColor: CARD, 
-                        borderColor: `${INK}14` 
-                      }}
-                    >
+                {childrenProfiles.length === 0 ? (
+                  <div className="p-8 text-center rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                    <p style={{ color: `${INK}60` }}>No children linked to your account yet.</p>
+                    <p className="text-sm mt-2" style={{ color: `${INK}40` }}>Ask your children to link your account as their parent.</p>
+                  </div>
+                ) : (
+                  childrenProfiles.map((child) => {
+                    const discipline = getDisciplineLevel(child.disciplineScore || 0);
+                    const isExpanded = expandedSection === `child-${child.id}`;
+                    
+                    return (
                       <div 
-                        className="p-5 cursor-pointer"
-                        onClick={() => toggleSection(`child-${child.id}`)}
+                        key={child.id} 
+                        className="rounded-sm border transition-shadow hover:shadow-sm"
+                        style={{ 
+                          backgroundColor: CARD, 
+                          borderColor: `${INK}14` 
+                        }}
                       >
-                        <div className="flex flex-wrap items-start justify-between gap-4">
-                          <div className="flex items-center gap-4">
-                            <div 
-                              className="w-12 h-12 rounded-full border-2 flex items-center justify-center text-lg font-bold shrink-0"
-                              style={{ 
-                                borderColor: discipline.color,
-                                backgroundColor: `${discipline.color}15`,
-                                color: discipline.color
-                              }}
-                            >
-                              {getInitials(child.name)}
-                            </div>
-                            <div>
-                              <h4 className="text-base font-semibold" style={{ fontFamily: FONT_DISPLAY }}>
-                                {child.name}
-                              </h4>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs" style={{ color: `${INK}60` }}>
-                                  Class {child.class}
-                                </span>
-                                <span 
-                                  className="text-[10px] px-2 py-0.5 rounded-full"
-                                  style={{ 
-                                    fontFamily: FONT_MONO,
-                                    color: discipline.color,
-                                    backgroundColor: `${discipline.color}15`
-                                  }}
-                                >
-                                  {discipline.label}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-4 flex-wrap">
-                            <div className="flex items-center gap-3 text-xs">
-                              <span className="flex items-center gap-1" style={{ color: MOSS }}>
-                                <BookOpen className="w-3 h-3" />
-                                {child.studyStreak}d
-                              </span>
-                              <span className="flex items-center gap-1" style={{ color: SLATE }}>
-                                <Dumbbell className="w-3 h-3" />
-                                {child.workoutStreak}d
-                              </span>
-                              <span className="flex items-center gap-1" style={{ color: BRASS }}>
-                                <Users className="w-3 h-3" />
-                                {child.attendance}%
-                              </span>
-                            </div>
-                            
-                            {isExpanded ? 
-                              <ChevronUp className="w-4 h-4" style={{ color: `${INK}55` }} /> : 
-                              <ChevronDown className="w-4 h-4" style={{ color: `${INK}55` }} />
-                            }
-                          </div>
-                        </div>
-                      </div>
-
-                      {isExpanded && (
                         <div 
-                          className="border-t p-5 space-y-5"
-                          style={{ 
-                            borderColor: `${INK}14`,
-                            backgroundColor: PAPER
-                          }}
+                          className="p-5 cursor-pointer"
+                          onClick={() => toggleSection(`child-${child.id}`)}
                         >
-                          {/* Quick Stats */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div className="p-3 rounded-sm" style={{ backgroundColor: CARD }}>
-                              <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Study Streak</p>
-                              <p className="text-lg font-bold" style={{ fontFamily: FONT_MONO, color: MOSS }}>
-                                {child.studyStreak}d
-                              </p>
-                            </div>
-                            <div className="p-3 rounded-sm" style={{ backgroundColor: CARD }}>
-                              <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Workout Streak</p>
-                              <p className="text-lg font-bold" style={{ fontFamily: FONT_MONO, color: SLATE }}>
-                                {child.workoutStreak}d
-                              </p>
-                            </div>
-                            <div className="p-3 rounded-sm" style={{ backgroundColor: CARD }}>
-                              <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Attendance</p>
-                              <p className="text-lg font-bold" style={{ fontFamily: FONT_MONO, color: BRASS }}>
-                                {child.attendance}%
-                              </p>
-                            </div>
-                            <div className="p-3 rounded-sm" style={{ backgroundColor: CARD }}>
-                              <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Achievements</p>
-                              <p className="text-lg font-bold" style={{ fontFamily: FONT_MONO, color: REDINK }}>
-                                {child.achievements.length}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Recent Notifications */}
-                          <div className="p-4 rounded-sm" style={{ backgroundColor: CARD }}>
-                            <div className="flex justify-between items-center mb-3">
-                              <h5 className="text-sm font-semibold flex items-center gap-2" style={{ fontFamily: FONT_DISPLAY }}>
-                                <Bell className="w-4 h-4" style={{ color: BRASS }} />
-                                Recent Updates
-                              </h5>
-                              <button 
-                                className="text-[10px] font-medium transition-opacity hover:opacity-70"
-                                style={{ fontFamily: FONT_MONO, color: BRASS }}
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                              <div 
+                                className="w-12 h-12 rounded-full border-2 flex items-center justify-center text-lg font-bold shrink-0"
+                                style={{ 
+                                  borderColor: discipline.color,
+                                  backgroundColor: `${discipline.color}15`,
+                                  color: discipline.color
+                                }}
                               >
-                                View All
-                              </button>
-                            </div>
-                            <div className="space-y-2">
-                              {child.notifications.slice(0, 3).map((notif) => (
-                                <div 
-                                  key={notif.id} 
-                                  className="flex items-center gap-3 p-2 rounded-sm"
-                                  style={{ backgroundColor: PAPER }}
-                                >
-                                  <div 
-                                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                                    style={{ 
-                                      backgroundColor: 
-                                        notif.type === 'achievement' ? MOSS :
-                                        notif.type === 'score' ? SLATE : BRASS
-                                    }}
-                                  />
-                                  <span className="text-xs flex-1" style={{ color: `${INK}80` }}>
-                                    {notif.message}
+                                {getInitials(child.name)}
+                              </div>
+                              <div>
+                                <h4 className="text-base font-semibold" style={{ fontFamily: FONT_DISPLAY }}>
+                                  {child.name}
+                                </h4>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs" style={{ color: `${INK}60` }}>
+                                    Class {child.class || 'N/A'}
                                   </span>
-                                  <span className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}50` }}>
-                                    {notif.date}
+                                  <span 
+                                    className="text-[10px] px-2 py-0.5 rounded-full"
+                                    style={{ 
+                                      fontFamily: FONT_MONO,
+                                      color: discipline.color,
+                                      backgroundColor: `${discipline.color}15`
+                                    }}
+                                  >
+                                    {discipline.label}
                                   </span>
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Health & Habits Quick View */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div 
-                              className="p-3 rounded-sm flex items-center gap-3"
-                              style={{ backgroundColor: CARD }}
-                            >
-                              <Droplets className="w-5 h-5" style={{ color: SLATE }} />
-                              <div>
-                                <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Hydration</p>
-                                <p className="text-sm font-semibold" style={{ fontFamily: FONT_MONO }}>
-                                  {child.waterIntake}
-                                </p>
                               </div>
                             </div>
-
-                            <div 
-                              className="p-3 rounded-sm flex items-center gap-3"
-                              style={{ backgroundColor: CARD }}
-                            >
-                              <Moon className="w-5 h-5" style={{ color: REDINK }} />
-                              <div>
-                                <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Sleep</p>
-                                <p className="text-sm font-semibold" style={{ fontFamily: FONT_MONO }}>
-                                  {child.sleep}
-                                </p>
+                            
+                            <div className="flex items-center gap-4 flex-wrap">
+                              <div className="flex items-center gap-3 text-xs">
+                                <span className="flex items-center gap-1" style={{ color: MOSS }}>
+                                  <BookOpen className="w-3 h-3" />
+                                  {child.studyStreak || 0}d
+                                </span>
+                                <span className="flex items-center gap-1" style={{ color: SLATE }}>
+                                  <Dumbbell className="w-3 h-3" />
+                                  {child.workoutStreak || 0}d
+                                </span>
+                                <span className="flex items-center gap-1" style={{ color: BRASS }}>
+                                  <Users className="w-3 h-3" />
+                                  {child.attendance || 0}%
+                                </span>
                               </div>
-                            </div>
-
-                            <div 
-                              className="p-3 rounded-sm flex items-center gap-3"
-                              style={{ backgroundColor: CARD }}
-                            >
-                              <Zap className="w-5 h-5" style={{ color: BRASS }} />
-                              <div>
-                                <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Energy Level</p>
-                                <p className="text-sm font-semibold" style={{ fontFamily: FONT_MONO }}>
-                                  {child.disciplineScore}%
-                                </p>
-                              </div>
+                              
+                              {isExpanded ? 
+                                <ChevronUp className="w-4 h-4" style={{ color: `${INK}55` }} /> : 
+                                <ChevronDown className="w-4 h-4" style={{ color: `${INK}55` }} />
+                              }
                             </div>
                           </div>
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+
+                        {isExpanded && (
+                          <div 
+                            className="border-t p-5 space-y-5"
+                            style={{ 
+                              borderColor: `${INK}14`,
+                              backgroundColor: PAPER
+                            }}
+                          >
+                            {/* Quick Stats */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <div className="p-3 rounded-sm" style={{ backgroundColor: CARD }}>
+                                <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Study Streak</p>
+                                <p className="text-lg font-bold" style={{ fontFamily: FONT_MONO, color: MOSS }}>
+                                  {child.studyStreak || 0}d
+                                </p>
+                              </div>
+                              <div className="p-3 rounded-sm" style={{ backgroundColor: CARD }}>
+                                <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Workout Streak</p>
+                                <p className="text-lg font-bold" style={{ fontFamily: FONT_MONO, color: SLATE }}>
+                                  {child.workoutStreak || 0}d
+                                </p>
+                              </div>
+                              <div className="p-3 rounded-sm" style={{ backgroundColor: CARD }}>
+                                <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Attendance</p>
+                                <p className="text-lg font-bold" style={{ fontFamily: FONT_MONO, color: BRASS }}>
+                                  {child.attendance || 0}%
+                                </p>
+                              </div>
+                              <div className="p-3 rounded-sm" style={{ backgroundColor: CARD }}>
+                                <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Achievements</p>
+                                <p className="text-lg font-bold" style={{ fontFamily: FONT_MONO, color: REDINK }}>
+                                  {child.achievements?.length || 0}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Subject Performance */}
+                            {child.subjects && child.subjects.length > 0 && (
+                              <div className="p-4 rounded-sm" style={{ backgroundColor: CARD }}>
+                                <h5 className="text-xs mb-3" style={{ 
+                                  fontFamily: FONT_MONO, 
+                                  color: `${INK}70`,
+                                  letterSpacing: '0.06em',
+                                  textTransform: 'uppercase'
+                                }}>
+                                  Subject Performance
+                                </h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {child.subjects.map((subject, idx) => (
+                                    <div key={idx} className="p-2 rounded-sm" style={{ backgroundColor: PAPER }}>
+                                      <div className="flex justify-between items-center mb-1">
+                                        <span className="text-sm" style={{ color: INK }}>{subject.name}</span>
+                                        <span className="text-sm font-bold" style={{ 
+                                          fontFamily: FONT_MONO,
+                                          color: getScoreColor(subject.score || 0) 
+                                        }}>
+                                          {subject.score || 0}%
+                                        </span>
+                                      </div>
+                                      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
+                                        <div className="h-full rounded-full transition-all duration-500" style={{ 
+                                          width: `${subject.progress || 0}%`,
+                                          backgroundColor: getScoreColor(subject.score || 0)
+                                        }} />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Recent Notifications */}
+                            {child.notifications && child.notifications.length > 0 && (
+                              <div className="p-4 rounded-sm" style={{ backgroundColor: CARD }}>
+                                <div className="flex justify-between items-center mb-3">
+                                  <h5 className="text-sm font-semibold flex items-center gap-2" style={{ fontFamily: FONT_DISPLAY }}>
+                                    <Bell className="w-4 h-4" style={{ color: BRASS }} />
+                                    Recent Updates
+                                  </h5>
+                                </div>
+                                <div className="space-y-2">
+                                  {child.notifications.slice(0, 3).map((notif, idx) => (
+                                    <div key={idx} className="flex items-center gap-3 p-2 rounded-sm" style={{ backgroundColor: PAPER }}>
+                                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ 
+                                        backgroundColor: notif.type === 'achievement' ? MOSS :
+                                          notif.type === 'score' ? SLATE : BRASS
+                                      }} />
+                                      <span className="text-xs flex-1" style={{ color: `${INK}80` }}>{notif.message}</span>
+                                      <span className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}50` }}>
+                                        {notif.date}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Health & Habits Quick View */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div className="p-3 rounded-sm flex items-center gap-3" style={{ backgroundColor: CARD }}>
+                                <Droplets className="w-5 h-5" style={{ color: SLATE }} />
+                                <div>
+                                  <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Hydration</p>
+                                  <p className="text-sm font-semibold" style={{ fontFamily: FONT_MONO }}>
+                                    {child.waterIntake || '0L / 2.5L'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="p-3 rounded-sm flex items-center gap-3" style={{ backgroundColor: CARD }}>
+                                <Moon className="w-5 h-5" style={{ color: REDINK }} />
+                                <div>
+                                  <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Sleep</p>
+                                  <p className="text-sm font-semibold" style={{ fontFamily: FONT_MONO }}>
+                                    {child.sleep || '0 hrs'}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="p-3 rounded-sm flex items-center gap-3" style={{ backgroundColor: CARD }}>
+                                <Zap className="w-5 h-5" style={{ color: BRASS }} />
+                                <div>
+                                  <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>Energy Level</p>
+                                  <p className="text-sm font-semibold" style={{ fontFamily: FONT_MONO }}>
+                                    {child.disciplineScore || 0}%
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
@@ -705,343 +761,317 @@ const ParentDashboard = ({ user }) => {
           {/* ==================== PROGRESS TAB ==================== */}
           {activeTab === 'progress' && (
             <div className="space-y-6">
-              {childrenProfiles.map((child) => (
-                <div 
-                  key={child.id}
-                  className="rounded-sm border p-6"
-                  style={{ backgroundColor: CARD, borderColor: `${INK}14` }}
-                >
-                  <div className="flex justify-between items-center mb-6">
-                    <h4 className="text-lg font-bold" style={{ fontFamily: FONT_DISPLAY }}>
-                      {child.name}'s Progress
-                    </h4>
-                    <Stamp 
-                      accent={MOSS} 
-                      onClick={() => setShowReportModal(true)}
-                    >
-                      <Download className="w-3.5 h-3.5 inline mr-1 -mt-0.5" /> Report
-                    </Stamp>
-                  </div>
-
-                  {/* Subject Performance */}
-                  <div className="mb-6">
-                    <h5 className="text-xs mb-3" style={{ 
-                      fontFamily: FONT_MONO, 
-                      color: `${INK}70`,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase'
-                    }}>
-                      Subject Performance
-                    </h5>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {child.subjects.map((subject, idx) => (
-                        <div 
-                          key={idx} 
-                          className="p-3 rounded-sm"
-                          style={{ backgroundColor: PAPER }}
-                        >
-                          <div className="flex justify-between items-center mb-1.5">
-                            <span className="text-sm font-medium" style={{ color: INK }}>
-                              {subject.name}
-                            </span>
-                            <span 
-                              className="text-sm font-bold"
-                              style={{ 
-                                fontFamily: FONT_MONO,
-                                color: getScoreColor(subject.score) 
-                              }}
-                            >
-                              {subject.score}%
-                            </span>
-                          </div>
-                          <div 
-                            className="w-full h-1.5 rounded-full overflow-hidden"
-                            style={{ backgroundColor: `${INK}14` }}
-                          >
-                            <div 
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{ 
-                                width: `${subject.progress}%`,
-                                backgroundColor: getScoreColor(subject.score)
-                              }}
-                            />
-                          </div>
-                          <p className="text-[10px] mt-1" style={{ 
-                            fontFamily: FONT_MONO,
-                            color: `${INK}50` 
-                          }}>
-                            Progress: {subject.progress}%
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Weekly Study Hours */}
-                  <div className="mb-6">
-                    <h5 className="text-xs mb-3" style={{ 
-                      fontFamily: FONT_MONO, 
-                      color: `${INK}70`,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase'
-                    }}>
-                      Weekly Study Hours
-                    </h5>
-                    <div className="flex items-end gap-2 h-32 p-3 rounded-sm" style={{ backgroundColor: PAPER }}>
-                      {child.weeklyStudyHours.map((hours, idx) => (
-                        <div key={idx} className="flex-1 flex flex-col items-center">
-                          <div 
-                            className="w-full rounded-t-sm transition-all duration-500"
-                            style={{ 
-                              height: `${(hours / 8) * 100}%`,
-                              backgroundColor: MOSS,
-                              opacity: 0.7
-                            }}
-                          />
-                          <span className="text-[10px] mt-1" style={{ 
-                            fontFamily: FONT_MONO,
-                            color: `${INK}50` 
-                          }}>
-                            {['M','T','W','T','F','S','S'][idx]}
-                          </span>
-                          <span className="text-[10px] font-bold" style={{ 
-                            fontFamily: FONT_MONO,
-                            color: INK 
-                          }}>
-                            {hours}h
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Weekly Workouts */}
-                  <div>
-                    <h5 className="text-xs mb-3" style={{ 
-                      fontFamily: FONT_MONO, 
-                      color: `${INK}70`,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase'
-                    }}>
-                      Weekly Workout Completion
-                    </h5>
-                    <div className="flex gap-2 p-3 rounded-sm" style={{ backgroundColor: PAPER }}>
-                      {child.weeklyWorkouts.map((completed, idx) => (
-                        <div key={idx} className="flex-1 text-center">
-                          <div 
-                            className="p-2 rounded-sm"
-                            style={{ 
-                              backgroundColor: completed ? `${MOSS}15` : `${INK}08`
-                            }}
-                          >
-                            {completed ? 
-                              <CheckCircle className="w-5 h-5 mx-auto" style={{ color: MOSS }} /> : 
-                              <X className="w-5 h-5 mx-auto" style={{ color: `${INK}40` }} />
-                            }
-                          </div>
-                          <span className="text-[10px] mt-1" style={{ 
-                            fontFamily: FONT_MONO,
-                            color: `${INK}50` 
-                          }}>
-                            {['M','T','W','T','F','S','S'][idx]}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+              {childrenProfiles.length === 0 ? (
+                <div className="p-8 text-center rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                  <p style={{ color: `${INK}60` }}>No children linked to your account yet.</p>
                 </div>
-              ))}
+              ) : (
+                childrenProfiles.map((child) => (
+                  <div key={child.id} className="rounded-sm border p-6" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                    <div className="flex justify-between items-center mb-6">
+                      <h4 className="text-lg font-bold" style={{ fontFamily: FONT_DISPLAY }}>
+                        {child.name}'s Progress
+                      </h4>
+                      <Stamp accent={MOSS} onClick={() => setShowReportModal(true)}>
+                        <Download className="w-3.5 h-3.5 inline mr-1 -mt-0.5" /> Report
+                      </Stamp>
+                    </div>
+
+                    {/* Subject Performance */}
+                    {child.subjects && child.subjects.length > 0 && (
+                      <div className="mb-6">
+                        <h5 className="text-xs mb-3" style={{ 
+                          fontFamily: FONT_MONO, 
+                          color: `${INK}70`,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase'
+                        }}>
+                          Subject Performance
+                        </h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {child.subjects.map((subject, idx) => (
+                            <div key={idx} className="p-3 rounded-sm" style={{ backgroundColor: PAPER }}>
+                              <div className="flex justify-between items-center mb-1.5">
+                                <span className="text-sm font-medium" style={{ color: INK }}>
+                                  {subject.name}
+                                </span>
+                                <span className="text-sm font-bold" style={{ 
+                                  fontFamily: FONT_MONO,
+                                  color: getScoreColor(subject.score || 0) 
+                                }}>
+                                  {subject.score || 0}%
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
+                                <div className="h-full rounded-full transition-all duration-500" style={{ 
+                                  width: `${subject.progress || 0}%`,
+                                  backgroundColor: getScoreColor(subject.score || 0)
+                                }} />
+                              </div>
+                              <p className="text-[10px] mt-1" style={{ 
+                                fontFamily: FONT_MONO,
+                                color: `${INK}50` 
+                              }}>
+                                Progress: {subject.progress || 0}%
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Weekly Study Hours */}
+                    {child.weeklyStudyHours && child.weeklyStudyHours.length > 0 && (
+                      <div className="mb-6">
+                        <h5 className="text-xs mb-3" style={{ 
+                          fontFamily: FONT_MONO, 
+                          color: `${INK}70`,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase'
+                        }}>
+                          Weekly Study Hours
+                        </h5>
+                        <div className="flex items-end gap-2 h-32 p-3 rounded-sm" style={{ backgroundColor: PAPER }}>
+                          {child.weeklyStudyHours.map((hours, idx) => (
+                            <div key={idx} className="flex-1 flex flex-col items-center">
+                              <div className="w-full rounded-t-sm transition-all duration-500" style={{ 
+                                height: `${(hours / 8) * 100}%`,
+                                backgroundColor: MOSS,
+                                opacity: 0.7
+                              }} />
+                              <span className="text-[10px] mt-1" style={{ 
+                                fontFamily: FONT_MONO,
+                                color: `${INK}50` 
+                              }}>
+                                {['M','T','W','T','F','S','S'][idx]}
+                              </span>
+                              <span className="text-[10px] font-bold" style={{ 
+                                fontFamily: FONT_MONO,
+                                color: INK 
+                              }}>
+                                {hours}h
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Weekly Workouts */}
+                    {child.weeklyWorkouts && child.weeklyWorkouts.length > 0 && (
+                      <div>
+                        <h5 className="text-xs mb-3" style={{ 
+                          fontFamily: FONT_MONO, 
+                          color: `${INK}70`,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase'
+                        }}>
+                          Weekly Workout Completion
+                        </h5>
+                        <div className="flex gap-2 p-3 rounded-sm" style={{ backgroundColor: PAPER }}>
+                          {child.weeklyWorkouts.map((completed, idx) => (
+                            <div key={idx} className="flex-1 text-center">
+                              <div className="p-2 rounded-sm" style={{ 
+                                backgroundColor: completed ? `${MOSS}15` : `${INK}08`
+                              }}>
+                                {completed ? 
+                                  <CheckCircle className="w-5 h-5 mx-auto" style={{ color: MOSS }} /> : 
+                                  <X className="w-5 h-5 mx-auto" style={{ color: `${INK}40` }} />
+                                }
+                              </div>
+                              <span className="text-[10px] mt-1" style={{ 
+                                fontFamily: FONT_MONO,
+                                color: `${INK}50` 
+                              }}>
+                                {['M','T','W','T','F','S','S'][idx]}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           )}
 
           {/* ==================== HABITS TAB ==================== */}
           {activeTab === 'habits' && (
             <div className="space-y-6">
-              {childrenProfiles.map((child) => (
-                <div 
-                  key={child.id}
-                  className="rounded-sm border p-6"
-                  style={{ backgroundColor: CARD, borderColor: `${INK}14` }}
-                >
-                  <h4 className="text-lg font-bold mb-4" style={{ fontFamily: FONT_DISPLAY }}>
-                    {child.name}'s Daily Habits
-                  </h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {child.dailyHabits.map((habit, idx) => (
-                      <div 
-                        key={idx} 
-                        className="p-3 rounded-sm flex items-center justify-between"
-                        style={{ 
-                          backgroundColor: habit.completed ? `${MOSS}08` : PAPER,
-                          border: `1px solid ${habit.completed ? `${MOSS}33` : `${INK}14`}`
-                        }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                            style={{ 
-                              backgroundColor: habit.completed ? MOSS : `${INK}14`,
-                              color: habit.completed ? CARD : `${INK}40`
-                            }}
-                          >
-                            {habit.completed ? 
-                              <CheckCircle className="w-4 h-4" /> : 
-                              <Clock className="w-4 h-4" />
-                            }
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium" style={{ 
-                              color: habit.completed ? INK : `${INK}70`,
-                              textDecoration: habit.completed ? 'line-through' : 'none'
-                            }}>
-                              {habit.name}
-                            </p>
-                            <p className="text-[10px]" style={{ 
+              {childrenProfiles.length === 0 ? (
+                <div className="p-8 text-center rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                  <p style={{ color: `${INK}60` }}>No children linked to your account yet.</p>
+                </div>
+              ) : (
+                childrenProfiles.map((child) => (
+                  <div key={child.id} className="rounded-sm border p-6" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                    <h4 className="text-lg font-bold mb-4" style={{ fontFamily: FONT_DISPLAY }}>
+                      {child.name}'s Daily Habits
+                    </h4>
+                    
+                    {child.dailyHabits && child.dailyHabits.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {child.dailyHabits.map((habit, idx) => (
+                          <div key={idx} className="p-3 rounded-sm flex items-center justify-between" style={{ 
+                            backgroundColor: habit.completed ? `${MOSS}08` : PAPER,
+                            border: `1px solid ${habit.completed ? `${MOSS}33` : `${INK}14`}`
+                          }}>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ 
+                                backgroundColor: habit.completed ? MOSS : `${INK}14`,
+                                color: habit.completed ? CARD : `${INK}40`
+                              }}>
+                                {habit.completed ? <CheckCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium" style={{ 
+                                  color: habit.completed ? INK : `${INK}70`,
+                                  textDecoration: habit.completed ? 'line-through' : 'none'
+                                }}>
+                                  {habit.name}
+                                </p>
+                                <p className="text-[10px]" style={{ 
+                                  fontFamily: FONT_MONO,
+                                  color: `${INK}50` 
+                                }}>
+                                  {habit.time || 'N/A'}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ 
                               fontFamily: FONT_MONO,
-                              color: `${INK}50` 
+                              color: habit.completed ? MOSS : `${INK}50`,
+                              backgroundColor: habit.completed ? `${MOSS}15` : `${INK}08`
                             }}>
-                              {habit.time}
-                            </p>
+                              {habit.completed ? 'Done' : 'Pending'}
+                            </span>
                           </div>
-                        </div>
-                        <span 
-                          className="text-[10px] px-2 py-0.5 rounded-full"
-                          style={{ 
-                            fontFamily: FONT_MONO,
-                            color: habit.completed ? MOSS : `${INK}50`,
-                            backgroundColor: habit.completed ? `${MOSS}15` : `${INK}08`
-                          }}
-                        >
-                          {habit.completed ? 'Done' : 'Pending'}
-                        </span>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    ) : (
+                      <p className="text-sm" style={{ color: `${INK}60` }}>No habits tracked yet.</p>
+                    )}
 
-                  {/* Discipline Score */}
-                  <div 
-                    className="mt-5 p-4 rounded-sm"
-                    style={{ 
+                    {/* Discipline Score */}
+                    <div className="mt-5 p-4 rounded-sm" style={{ 
                       backgroundColor: `${BRASS}08`,
                       border: `1px solid ${BRASS}33`
-                    }}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-xs" style={{ 
-                          fontFamily: FONT_MONO,
-                          color: `${INK}70`
+                    }}>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-xs" style={{ 
+                            fontFamily: FONT_MONO,
+                            color: `${INK}70`
+                          }}>
+                            Overall Discipline Score
+                          </p>
+                          <p className="text-2xl font-bold" style={{ 
+                            fontFamily: FONT_MONO,
+                            color: INK 
+                          }}>
+                            {child.disciplineScore || 0}/100
+                          </p>
+                        </div>
+                        <div className="w-16 h-16 rounded-full border-4 flex items-center justify-center" style={{ 
+                          borderColor: getDisciplineLevel(child.disciplineScore || 0).color 
                         }}>
-                          Overall Discipline Score
-                        </p>
-                        <p className="text-2xl font-bold" style={{ 
-                          fontFamily: FONT_MONO,
-                          color: INK 
-                        }}>
-                          {child.disciplineScore}/100
-                        </p>
-                      </div>
-                      <div 
-                        className="w-16 h-16 rounded-full border-4 flex items-center justify-center"
-                        style={{ borderColor: getDisciplineLevel(child.disciplineScore).color }}
-                      >
-                        <span className="text-lg font-bold" style={{ 
-                          fontFamily: FONT_MONO,
-                          color: getDisciplineLevel(child.disciplineScore).color 
-                        }}>
-                          {child.disciplineScore}%
-                        </span>
+                          <span className="text-lg font-bold" style={{ 
+                            fontFamily: FONT_MONO,
+                            color: getDisciplineLevel(child.disciplineScore || 0).color 
+                          }}>
+                            {child.disciplineScore || 0}%
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
 
           {/* ==================== ACHIEVEMENTS TAB ==================== */}
           {activeTab === 'achievements' && (
             <div className="space-y-6">
-              {childrenProfiles.map((child) => (
-                <div 
-                  key={child.id}
-                  className="rounded-sm border p-6"
-                  style={{ backgroundColor: CARD, borderColor: `${INK}14` }}
-                >
-                  <h4 className="text-lg font-bold mb-4" style={{ fontFamily: FONT_DISPLAY }}>
-                    {child.name}'s Achievements
-                  </h4>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                    {child.achievements.map((achievement, idx) => (
-                      <div 
-                        key={idx} 
-                        className="p-4 rounded-sm text-center"
-                        style={{ 
-                          backgroundColor: `${BRASS}08`,
-                          border: `1px solid ${BRASS}33`
-                        }}
-                      >
-                        <div 
-                          className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2"
-                          style={{ 
-                            backgroundColor: BRASS,
-                            color: CARD
-                          }}
-                        >
-                          <Award className="w-7 h-7" />
-                        </div>
-                        <h6 className="text-sm font-semibold" style={{ fontFamily: FONT_DISPLAY }}>
-                          {achievement}
-                        </h6>
-                        <p className="text-[10px] mt-1" style={{ 
-                          fontFamily: FONT_MONO,
-                          color: `${INK}50` 
-                        }}>
-                          Earned Achievement
+              {childrenProfiles.length === 0 ? (
+                <div className="p-8 text-center rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                  <p style={{ color: `${INK}60` }}>No children linked to your account yet.</p>
+                </div>
+              ) : (
+                childrenProfiles.map((child) => (
+                  <div key={child.id} className="rounded-sm border p-6" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                    <h4 className="text-lg font-bold mb-4" style={{ fontFamily: FONT_DISPLAY }}>
+                      {child.name}'s Achievements
+                    </h4>
+                    
+                    {child.achievements && child.achievements.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {child.achievements.map((achievement, idx) => (
+                          <div key={idx} className="p-4 rounded-sm text-center" style={{ 
+                            backgroundColor: `${BRASS}08`,
+                            border: `1px solid ${BRASS}33`
+                          }}>
+                            <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2" style={{ 
+                              backgroundColor: BRASS,
+                              color: CARD
+                            }}>
+                              <Award className="w-7 h-7" />
+                            </div>
+                            <h6 className="text-sm font-semibold" style={{ fontFamily: FONT_DISPLAY }}>
+                              {achievement}
+                            </h6>
+                            <p className="text-[10px] mt-1" style={{ 
+                              fontFamily: FONT_MONO,
+                              color: `${INK}50` 
+                            }}>
+                              Earned Achievement
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm" style={{ color: `${INK}60` }}>No achievements earned yet.</p>
+                    )}
+
+                    {/* Badge Statistics */}
+                    <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="p-3 rounded-sm text-center" style={{ backgroundColor: PAPER }}>
+                        <p className="text-xl font-bold" style={{ fontFamily: FONT_MONO, color: INK }}>
+                          {child.achievements?.length || 0}
+                        </p>
+                        <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}50` }}>
+                          Total Badges
                         </p>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Badge Statistics */}
-                  <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-3 rounded-sm text-center" style={{ backgroundColor: PAPER }}>
-                      <p className="text-xl font-bold" style={{ fontFamily: FONT_MONO, color: INK }}>
-                        {child.achievements.length}
-                      </p>
-                      <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}50` }}>
-                        Total Badges
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-sm text-center" style={{ backgroundColor: PAPER }}>
-                      <p className="text-xl font-bold" style={{ fontFamily: FONT_MONO, color: MOSS }}>
-                        {child.studyStreak}
-                      </p>
-                      <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}50` }}>
-                        Study Streak
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-sm text-center" style={{ backgroundColor: PAPER }}>
-                      <p className="text-xl font-bold" style={{ fontFamily: FONT_MONO, color: SLATE }}>
-                        {child.workoutStreak}
-                      </p>
-                      <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}50` }}>
-                        Workout Streak
-                      </p>
-                    </div>
-                    <div className="p-3 rounded-sm text-center" style={{ backgroundColor: PAPER }}>
-                      <p className="text-xl font-bold" style={{ fontFamily: FONT_MONO, color: BRASS }}>
-                        {child.disciplineScore}%
-                      </p>
-                      <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}50` }}>
-                        Discipline
-                      </p>
+                      <div className="p-3 rounded-sm text-center" style={{ backgroundColor: PAPER }}>
+                        <p className="text-xl font-bold" style={{ fontFamily: FONT_MONO, color: MOSS }}>
+                          {child.studyStreak || 0}
+                        </p>
+                        <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}50` }}>
+                          Study Streak
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-sm text-center" style={{ backgroundColor: PAPER }}>
+                        <p className="text-xl font-bold" style={{ fontFamily: FONT_MONO, color: SLATE }}>
+                          {child.workoutStreak || 0}
+                        </p>
+                        <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}50` }}>
+                          Workout Streak
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-sm text-center" style={{ backgroundColor: PAPER }}>
+                        <p className="text-xl font-bold" style={{ fontFamily: FONT_MONO, color: BRASS }}>
+                          {child.disciplineScore || 0}%
+                        </p>
+                        <p className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}50` }}>
+                          Discipline
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
         </div>
@@ -1050,33 +1080,25 @@ const ParentDashboard = ({ user }) => {
       {/* ==================== REPORT MODAL ==================== */}
       {showReportModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div 
-            className="rounded-sm max-w-lg w-full p-6"
-            style={{ backgroundColor: CARD, border: `2px solid ${INK}1A` }}
-          >
+          <div className="rounded-sm max-w-lg w-full p-6" style={{ backgroundColor: CARD, border: `2px solid ${INK}1A` }}>
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-xl font-bold" style={{ fontFamily: FONT_DISPLAY }}>
                 <FileText className="w-5 h-5 inline mr-2" style={{ color: MOSS }} />
                 Weekly Report
               </h3>
-              <button 
-                onClick={() => setShowReportModal(false)} 
-                className="transition-opacity hover:opacity-60"
-                style={{ color: `${INK}60` }}
-              >
+              <button onClick={() => setShowReportModal(false)} className="transition-opacity hover:opacity-60" style={{ color: `${INK}60` }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             <div className="space-y-4">
               <div>
-                <label className="text-xs block mb-1" style={{ 
-                  fontFamily: FONT_MONO,
-                  color: `${INK}60` 
-                }}>
+                <label className="text-xs block mb-1" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>
                   Select Child
                 </label>
                 <select 
+                  value={reportData.childId}
+                  onChange={(e) => setReportData({ ...reportData, childId: e.target.value })}
                   className="w-full rounded-sm px-3 py-2 border text-sm"
                   style={{ 
                     backgroundColor: PAPER,
@@ -1085,6 +1107,7 @@ const ParentDashboard = ({ user }) => {
                     fontFamily: FONT_BODY
                   }}
                 >
+                  <option value="">Select a child...</option>
                   {childrenProfiles.map(child => (
                     <option key={child.id} value={child.id}>{child.name}</option>
                   ))}
@@ -1092,14 +1115,13 @@ const ParentDashboard = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-xs block mb-1" style={{ 
-                  fontFamily: FONT_MONO,
-                  color: `${INK}60` 
-                }}>
+                <label className="text-xs block mb-1" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>
                   Week
                 </label>
                 <input 
                   type="week" 
+                  value={reportData.week}
+                  onChange={(e) => setReportData({ ...reportData, week: e.target.value })}
                   className="w-full rounded-sm px-3 py-2 border text-sm"
                   style={{ 
                     backgroundColor: PAPER,
@@ -1111,13 +1133,12 @@ const ParentDashboard = ({ user }) => {
               </div>
               
               <div>
-                <label className="text-xs block mb-1" style={{ 
-                  fontFamily: FONT_MONO,
-                  color: `${INK}60` 
-                }}>
+                <label className="text-xs block mb-1" style={{ fontFamily: FONT_MONO, color: `${INK}60` }}>
                   Report Type
                 </label>
                 <select 
+                  value={reportData.reportType}
+                  onChange={(e) => setReportData({ ...reportData, reportType: e.target.value })}
                   className="w-full rounded-sm px-3 py-2 border text-sm"
                   style={{ 
                     backgroundColor: PAPER,
@@ -1146,10 +1167,7 @@ const ParentDashboard = ({ user }) => {
                 Cancel
               </button>
               <button 
-                onClick={() => { 
-                  setToast({ message: 'Report generated successfully!', type: 'success' }); 
-                  setShowReportModal(false); 
-                }} 
+                onClick={handleGenerateReport} 
                 className="flex-1 py-2 rounded-sm text-sm font-medium flex items-center justify-center gap-2"
                 style={{ 
                   backgroundColor: MOSS,

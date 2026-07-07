@@ -374,11 +374,12 @@ const StudiesModule = () => {
               Access all study materials and smart learning tools
             </p>
             <button
-              className="relative px-7 py-2.5 rounded-sm text-sm transition-transform active:scale-95"
-              style={{ backgroundColor: PAPER, color: MOSS, fontFamily: FONT_MONO, letterSpacing: '0.06em', textTransform: 'uppercase' }}
-            >
-              Explore Resources
-            </button>
+  onClick={() => navigate('/features/studies/resources')} // Change this line
+  className="relative px-7 py-2.5 rounded-sm text-sm transition-transform active:scale-95"
+  style={{ backgroundColor: PAPER, color: MOSS, fontFamily: FONT_MONO, letterSpacing: '0.06em', textTransform: 'uppercase' }}
+>
+  Explore Resources
+</button>
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import profileService from '../services/profileService';
+import parentService from '../services/parentService';
 import logo from '../assets/logo.png';
 import {
   Mail,
@@ -71,7 +72,9 @@ const ParentProfile = () => {
   const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedChild, setSelectedChild] = useState(null);
+  const [showChildDetails, setShowChildDetails] = useState(null);
 
+  // Real data states
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -86,104 +89,20 @@ const ParentProfile = () => {
 
   const [profileImage, setProfileImage] = useState(user?.profileImage || null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showChildDetails, setShowChildDetails] = useState(null);
 
-  // Mock data - In production, fetch from API
+  // Real data from API
   const [parentStats, setParentStats] = useState({
-    totalChildren: 2,
-    activeChildren: 2,
-    averageScore: 85,
-    totalAchievements: 12,
-    consistencyScore: 78,
-    weeklyCheckins: 5,
-    totalHoursMonitored: 124,
-    improvementRate: 15,
-    children: [
-      {
-        id: 1,
-        name: 'Alex Mercer',
-        age: 16,
-        grade: '10th',
-        school: 'St. Mary\'s High School',
-        disciplineScore: 87,
-        studyStreak: 5,
-        workoutStreak: 3,
-        habitStreak: 7,
-        averageScore: 85,
-        achievements: ['Study Master', 'Fitness Beginner', 'Consistency Star'],
-        subjects: [
-          { name: 'Mathematics', score: 88, progress: 85 },
-          { name: 'Physics', score: 92, progress: 90 },
-          { name: 'Chemistry', score: 78, progress: 75 },
-          { name: 'English', score: 85, progress: 80 }
-        ],
-        weeklyData: {
-          study: [4.5, 5.2, 3.8, 6.0, 4.2, 5.5, 4.0],
-          workout: [1, 1, 0, 1, 1, 0, 1],
-          habits: [7, 6, 7, 5, 7, 6, 7]
-        },
-        dailyHabits: [
-          { name: 'Morning Study', completed: true, time: '7:00 AM' },
-          { name: 'Exercise', completed: true, time: '4:00 PM' },
-          { name: 'Reading', completed: false, time: '8:00 PM' },
-          { name: 'Meditation', completed: true, time: '9:30 PM' }
-        ],
-        notifications: [
-          { id: 1, message: 'Completed 5 study sessions this week!', type: 'achievement', date: 'Jan 15' },
-          { id: 2, message: 'Scored 92% in Physics test', type: 'score', date: 'Jan 14' },
-          { id: 3, message: 'Study streak: 5 days!', type: 'streak', date: 'Jan 13' }
-        ],
-        lastActive: '2 hours ago',
-        overallStatus: 'Excellent'
-      },
-      {
-        id: 2,
-        name: 'Sarah Mercer',
-        age: 14,
-        grade: '8th',
-        school: 'St. Mary\'s High School',
-        disciplineScore: 92,
-        studyStreak: 7,
-        workoutStreak: 5,
-        habitStreak: 10,
-        averageScore: 90,
-        achievements: ['Math Whiz', 'Fitness Star', 'Perfect Attendance'],
-        subjects: [
-          { name: 'Mathematics', score: 95, progress: 92 },
-          { name: 'Science', score: 90, progress: 88 },
-          { name: 'English', score: 88, progress: 85 },
-          { name: 'Social Studies', score: 85, progress: 82 }
-        ],
-        weeklyData: {
-          study: [5.0, 4.8, 5.5, 6.2, 5.8, 4.5, 5.2],
-          workout: [1, 1, 1, 1, 1, 1, 1],
-          habits: [7, 7, 7, 7, 7, 7, 7]
-        },
-        dailyHabits: [
-          { name: 'Morning Study', completed: true, time: '6:30 AM' },
-          { name: 'Exercise', completed: true, time: '5:00 PM' },
-          { name: 'Reading', completed: true, time: '8:30 PM' },
-          { name: 'Meditation', completed: true, time: '9:00 PM' }
-        ],
-        notifications: [
-          { id: 1, message: 'Earned "Math Whiz" badge!', type: 'achievement', date: 'Jan 16' },
-          { id: 2, message: 'Perfect attendance this week!', type: 'achievement', date: 'Jan 15' }
-        ],
-        lastActive: '1 hour ago',
-        overallStatus: 'Outstanding'
-      }
-    ],
-    recentActivities: [
-      { child: 'Alex', action: 'Completed Math assignment', time: '2 hours ago' },
-      { child: 'Sarah', action: 'Earned "Math Whiz" badge', time: '4 hours ago' },
-      { child: 'Alex', action: 'Started Physics chapter 5', time: '6 hours ago' },
-      { child: 'Sarah', action: 'Completed weekly workout goal', time: '1 day ago' }
-    ],
-    familyGoals: [
-      { title: 'Improve overall discipline score', progress: 85, target: 90 },
-      { title: 'Increase study streak for Alex', progress: 60, target: 30 },
-      { title: 'Maintain workout consistency', progress: 90, target: 95 }
-    ]
+    totalChildren: 0,
+    activeChildren: 0,
+    averageScore: 0,
+    totalAchievements: 0,
+    consistencyScore: 0,
+    weeklyCheckins: 0,
+    totalHoursMonitored: 0,
+    improvementRate: 0,
+    children: [],
+    recentActivities: [],
+    familyGoals: []
   });
 
   const [stats, setStats] = useState({
@@ -193,8 +112,8 @@ const ParentProfile = () => {
     totalHours: 0,
     completedTasks: 0,
     achievementPoints: 0,
-    rank: 'Gold',
-    level: 'Advanced',
+    rank: 'Bronze',
+    level: 'Beginner',
     badges: 0,
     consistency: 0
   });
@@ -220,21 +139,33 @@ const ParentProfile = () => {
   }, []);
 
   useEffect(() => {
-    fetchProfileData();
+    fetchAllData();
   }, []);
 
-  const fetchProfileData = async () => {
+  const fetchAllData = async () => {
     setIsLoading(true);
     setError('');
     try {
-      const [profileData, statsData, achievementsData, activitiesData, weeklyProgressData] = await Promise.allSettled([
+      // Fetch all data in parallel
+      const [
+        profileData,
+        statsData,
+        achievementsData,
+        activitiesData,
+        weeklyProgressData,
+        childrenData,
+        familyStatsData
+      ] = await Promise.allSettled([
         profileService.getProfile(),
         profileService.getUserStats(),
         profileService.getAchievements(),
         profileService.getRecentActivities(),
-        profileService.getWeeklyProgress()
+        profileService.getWeeklyProgress(),
+        parentService.getChildren().catch(() => []),
+        parentService.getFamilyStats().catch(() => null)
       ]);
 
+      // 1. Profile Data
       if (profileData.status === 'fulfilled' && profileData.value) {
         const data = profileData.value;
         setFormData({
@@ -251,45 +182,155 @@ const ParentProfile = () => {
         if (data.profileImage) setProfileImage(data.profileImage);
       }
 
+      // 2. User Stats
       if (statsData.status === 'fulfilled' && statsData.value) {
         setStats(statsData.value);
       }
 
+      // 3. Achievements
       if (achievementsData.status === 'fulfilled' && achievementsData.value) {
         setAchievements(achievementsData.value);
       } else {
         setDefaultAchievements();
       }
 
+      // 4. Recent Activities
       if (activitiesData.status === 'fulfilled' && activitiesData.value) {
         setRecentActivities(activitiesData.value);
       } else {
         setDefaultActivities();
       }
 
+      // 5. Weekly Progress
       if (weeklyProgressData.status === 'fulfilled' && weeklyProgressData.value) {
         setWeeklyData(weeklyProgressData.value);
       } else {
         setDefaultWeeklyData();
       }
 
+      // 6. Children Data
+      let children = [];
+      if (childrenData.status === 'fulfilled' && childrenData.value) {
+        children = childrenData.value;
+      }
+
+      // 7. Family Stats
+      let familyStats = null;
+      if (familyStatsData.status === 'fulfilled' && familyStatsData.value) {
+        familyStats = familyStatsData.value;
+      }
+
+      // Build parent stats from real data
+      const totalChildren = children.length || 0;
+      const activeChildren = familyStats?.activeChildren || totalChildren;
+      
+      // Calculate average score from children data
+      let avgScore = 0;
+      let totalAchievements = 0;
+      let totalConsistency = 0;
+      let totalStudyStreak = 0;
+      let totalWorkoutStreak = 0;
+      let totalHabitStreak = 0;
+
+      children.forEach(child => {
+        avgScore += child.disciplineScore || 0;
+        totalAchievements += child.achievements?.length || 0;
+        totalConsistency += child.disciplineScore || 0;
+        totalStudyStreak += child.studyStreak || 0;
+        totalWorkoutStreak += child.workoutStreak || 0;
+        totalHabitStreak += child.habitStreak || 0;
+      });
+
+      const avgDiscipline = totalChildren > 0 ? Math.round(avgScore / totalChildren) : 0;
+      const avgConsistency = totalChildren > 0 ? Math.round(totalConsistency / totalChildren) : 0;
+      const avgStudyStreak = totalChildren > 0 ? Math.round(totalStudyStreak / totalChildren) : 0;
+      const avgWorkoutStreak = totalChildren > 0 ? Math.round(totalWorkoutStreak / totalChildren) : 0;
+
+      // Build family goals based on children data
+      const familyGoals = [
+        { 
+          title: 'Improve overall discipline score', 
+          progress: avgDiscipline,
+          target: 90 
+        },
+        { 
+          title: 'Increase study streaks', 
+          progress: Math.min(avgStudyStreak * 10, 100),
+          target: 50 
+        },
+        { 
+          title: 'Maintain workout consistency', 
+          progress: Math.min(avgWorkoutStreak * 15, 100),
+          target: 95 
+        }
+      ];
+
+      // Build children with full details
+      const childrenWithDetails = children.map(child => ({
+        id: child.id || child._id,
+        name: child.name || 'Unknown',
+        age: child.age || 16,
+        grade: child.class || 'N/A',
+        school: child.school || 'Not specified',
+        disciplineScore: child.disciplineScore || 0,
+        studyStreak: child.studyStreak || 0,
+        workoutStreak: child.workoutStreak || 0,
+        habitStreak: child.habitStreak || 0,
+        averageScore: child.averageScore || child.disciplineScore || 0,
+        achievements: child.achievements || [],
+        subjects: child.subjects || [
+          { name: 'Mathematics', score: 0, progress: 0 },
+          { name: 'Physics', score: 0, progress: 0 },
+          { name: 'Chemistry', score: 0, progress: 0 },
+          { name: 'English', score: 0, progress: 0 }
+        ],
+        weeklyData: child.weeklyData || {
+          study: [0,0,0,0,0,0,0],
+          workout: [0,0,0,0,0,0,0],
+          habits: [0,0,0,0,0,0,0]
+        },
+        dailyHabits: child.dailyHabits || [
+          { name: 'Morning Study', completed: false, time: '7:00 AM' },
+          { name: 'Exercise', completed: false, time: '4:00 PM' },
+          { name: 'Reading', completed: false, time: '8:00 PM' },
+          { name: 'Meditation', completed: false, time: '9:30 PM' }
+        ],
+        notifications: child.notifications || [
+          { id: 1, message: 'Welcome to Trackwise!', type: 'achievement', date: new Date().toLocaleDateString() }
+        ],
+        lastActive: child.lastActive || 'Recently',
+        overallStatus: child.disciplineScore >= 90 ? 'Outstanding' : 
+                      child.disciplineScore >= 75 ? 'Excellent' : 
+                      child.disciplineScore >= 50 ? 'Good' : 'Needs Attention'
+      }));
+
+      // Update parent stats
+      setParentStats({
+        totalChildren,
+        activeChildren,
+        averageScore: avgDiscipline,
+        totalAchievements,
+        consistencyScore: avgConsistency,
+        weeklyCheckins: Math.round(totalChildren * 5), // Approximate
+        totalHoursMonitored: Math.round(totalChildren * 20),
+        improvementRate: Math.min(avgDiscipline, 100),
+        children: childrenWithDetails,
+        recentActivities: recentActivities.length > 0 ? recentActivities : [
+          { child: 'System', action: 'Welcome to your profile!', time: 'Just now' }
+        ],
+        familyGoals
+      });
+
     } catch (error) {
       console.error('Error fetching profile data:', error);
-      setDefaultStats();
+      setError('Failed to load profile data. Please refresh the page.');
+      // Set default data
       setDefaultAchievements();
       setDefaultActivities();
       setDefaultWeeklyData();
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const setDefaultStats = () => {
-    setStats({
-      studyStreak: 0, workoutStreak: 0, habitStreak: 0, totalHours: 0,
-      completedTasks: 0, achievementPoints: 0, rank: 'Gold', level: 'Advanced',
-      badges: 0, consistency: 0
-    });
   };
 
   const setDefaultAchievements = () => {
@@ -341,9 +382,14 @@ const ParentProfile = () => {
 
   const handleCancel = () => {
     setFormData({
-      name: user?.name || '', email: user?.email || '', phone: user?.phone || '',
-      location: user?.location || '', bio: user?.bio || '', role: user?.role || 'Parent',
-      occupation: user?.occupation || '', childrenCount: user?.childrenCount || '',
+      name: user?.name || '', 
+      email: user?.email || '', 
+      phone: user?.phone || '',
+      location: user?.location || '', 
+      bio: user?.bio || '', 
+      role: user?.role || 'Parent',
+      occupation: user?.occupation || '', 
+      childrenCount: user?.childrenCount || '',
       preferredContact: user?.preferredContact || 'email'
     });
     setIsEditing(false);
@@ -398,7 +444,7 @@ const ParentProfile = () => {
     return { label: 'Needs Attention', color: REDINK };
   };
 
-  const level = getDisciplineLevel(stats.consistency);
+  const level = getDisciplineLevel(stats.consistency || parentStats.consistencyScore || 0);
   const roleColor = getRoleColor(formData.role);
 
   const GaugeDial = ({ score, color }) => {
@@ -594,7 +640,7 @@ const ParentProfile = () => {
             <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${SLATE}15`, color: SLATE, fontFamily: FONT_MONO }}>
               <Home className="w-3 h-3 inline mr-1" /> Parent
             </span>
-            {stats.rank && (
+            {stats.rank && stats.rank !== 'Bronze' && (
               <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${GOLD}15`, color: GOLD, fontFamily: FONT_MONO }}>
                 <Crown className="w-3 h-3 inline mr-1" /> {stats.rank}
               </span>
@@ -688,14 +734,14 @@ const ParentProfile = () => {
 
         {/* Parent Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          <StatCard icon={<Users className="w-4 h-4" />} value={parentStats.totalChildren} label="Total Children" accent={SLATE} />
-          <StatCard icon={<UserCheck className="w-4 h-4" />} value={parentStats.activeChildren} label="Active Children" accent={MOSS} />
-          <StatCard icon={<Award className="w-4 h-4" />} value={parentStats.totalAchievements} label="Achievements" accent={BRASS} />
-          <StatCard icon={<TrendingUp className="w-4 h-4" />} value={`${parentStats.averageScore}%`} label="Avg Score" accent={MOSS} />
-          <StatCard icon={<Heart className="w-4 h-4" />} value={`${parentStats.consistencyScore}%`} label="Consistency" accent={REDINK} />
-          <StatCard icon={<Calendar className="w-4 h-4" />} value={parentStats.weeklyCheckins} label="Check-ins/Week" accent={SLATE} />
-          <StatCard icon={<Clock className="w-4 h-4" />} value={`${parentStats.totalHoursMonitored}h`} label="Hours Monitored" accent={BRASS} />
-          <StatCard icon={<TrendingUp className="w-4 h-4" />} value={`${parentStats.improvementRate}%`} label="Improvement Rate" accent={MOSS} />
+          <StatCard icon={<Users className="w-4 h-4" />} value={parentStats.totalChildren || 0} label="Total Children" accent={SLATE} />
+          <StatCard icon={<UserCheck className="w-4 h-4" />} value={parentStats.activeChildren || 0} label="Active Children" accent={MOSS} />
+          <StatCard icon={<Award className="w-4 h-4" />} value={parentStats.totalAchievements || 0} label="Achievements" accent={BRASS} />
+          <StatCard icon={<TrendingUp className="w-4 h-4" />} value={`${parentStats.averageScore || 0}%`} label="Avg Score" accent={MOSS} />
+          <StatCard icon={<Heart className="w-4 h-4" />} value={`${parentStats.consistencyScore || 0}%`} label="Consistency" accent={REDINK} />
+          <StatCard icon={<Calendar className="w-4 h-4" />} value={parentStats.weeklyCheckins || 0} label="Check-ins/Week" accent={SLATE} />
+          <StatCard icon={<Clock className="w-4 h-4" />} value={`${parentStats.totalHoursMonitored || 0}h`} label="Hours Monitored" accent={BRASS} />
+          <StatCard icon={<TrendingUp className="w-4 h-4" />} value={`${parentStats.improvementRate || 0}%`} label="Improvement Rate" accent={MOSS} />
         </div>
 
         {/* Tabs */}
@@ -726,59 +772,63 @@ const ParentProfile = () => {
                   <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Children Overview</h4>
                 </div>
                 <div className="space-y-3">
-                  {parentStats.children.map((child) => (
-                    <div key={child.id} className="p-3 rounded-sm border cursor-pointer hover:shadow-sm transition-shadow"
-                      style={{ borderColor: `${INK}0C` }}
-                      onClick={() => setSelectedChild(selectedChild === child.id ? null : child.id)}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                            style={{ backgroundColor: `${SLATE}15`, color: SLATE }}>
-                            {child.name.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="font-medium">{child.name}</p>
-                            <div className="flex items-center gap-3 text-xs" style={{ color: `${INK}60` }}>
-                              <span>Class {child.grade}</span>
-                              <span>{child.school}</span>
+                  {parentStats.children && parentStats.children.length > 0 ? (
+                    parentStats.children.map((child) => (
+                      <div key={child.id} className="p-3 rounded-sm border cursor-pointer hover:shadow-sm transition-shadow"
+                        style={{ borderColor: `${INK}0C` }}
+                        onClick={() => setSelectedChild(selectedChild === child.id ? null : child.id)}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
+                              style={{ backgroundColor: `${SLATE}15`, color: SLATE }}>
+                              {child.name?.charAt(0) || '?'}
+                            </div>
+                            <div>
+                              <p className="font-medium">{child.name || 'Unknown'}</p>
+                              <div className="flex items-center gap-3 text-xs" style={{ color: `${INK}60` }}>
+                                <span>Class {child.grade || 'N/A'}</span>
+                                <span>{child.school || 'Not specified'}</span>
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs px-2 py-0.5 rounded-full" style={{
+                              backgroundColor: child.overallStatus === 'Outstanding' ? `${MOSS}15` :
+                                child.overallStatus === 'Excellent' ? `${SLATE}15` : `${BRASS}15`,
+                              color: child.overallStatus === 'Outstanding' ? MOSS :
+                                child.overallStatus === 'Excellent' ? SLATE : BRASS
+                            }}>
+                              {child.overallStatus || 'Good'}
+                            </span>
+                            <span className="text-sm font-bold" style={{ color: getProgressColor(child.disciplineScore || 0) }}>
+                              {child.disciplineScore || 0}%
+                            </span>
+                            <ChevronRight className={`w-4 h-4 transition-transform ${selectedChild === child.id ? 'rotate-90' : ''}`}
+                              style={{ color: `${INK}40` }} />
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs px-2 py-0.5 rounded-full" style={{
-                            backgroundColor: child.overallStatus === 'Outstanding' ? `${MOSS}15` :
-                              child.overallStatus === 'Excellent' ? `${SLATE}15` : `${BRASS}15`,
-                            color: child.overallStatus === 'Outstanding' ? MOSS :
-                              child.overallStatus === 'Excellent' ? SLATE : BRASS
-                          }}>
-                            {child.overallStatus}
-                          </span>
-                          <span className="text-sm font-bold" style={{ color: getProgressColor(child.disciplineScore) }}>
-                            {child.disciplineScore}%
-                          </span>
-                          <ChevronRight className={`w-4 h-4 transition-transform ${selectedChild === child.id ? 'rotate-90' : ''}`}
-                            style={{ color: `${INK}40` }} />
-                        </div>
-                      </div>
 
-                      {selectedChild === child.id && (
-                        <div className="mt-3 pt-3 border-t" style={{ borderColor: `${INK}0C` }}>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div className="text-xs" style={{ color: `${INK}60` }}>
-                              <span className="block">Study Streak: <span className="font-bold" style={{ color: MOSS }}>{child.studyStreak}d</span></span>
-                              <span className="block">Workout Streak: <span className="font-bold" style={{ color: SLATE }}>{child.workoutStreak}d</span></span>
-                              <span className="block">Habit Streak: <span className="font-bold" style={{ color: BRASS }}>{child.habitStreak}d</span></span>
-                            </div>
-                            <div className="text-xs" style={{ color: `${INK}60` }}>
-                              <span className="block">Avg Score: <span className="font-bold" style={{ color: MOSS }}>{child.averageScore}%</span></span>
-                              <span className="block">Achievements: <span className="font-bold" style={{ color: BRASS }}>{child.achievements.length}</span></span>
-                              <span className="block">Last Active: <span className="font-bold" style={{ color: SLATE }}>{child.lastActive}</span></span>
+                        {selectedChild === child.id && (
+                          <div className="mt-3 pt-3 border-t" style={{ borderColor: `${INK}0C` }}>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="text-xs" style={{ color: `${INK}60` }}>
+                                <span className="block">Study Streak: <span className="font-bold" style={{ color: MOSS }}>{child.studyStreak || 0}d</span></span>
+                                <span className="block">Workout Streak: <span className="font-bold" style={{ color: SLATE }}>{child.workoutStreak || 0}d</span></span>
+                                <span className="block">Habit Streak: <span className="font-bold" style={{ color: BRASS }}>{child.habitStreak || 0}d</span></span>
+                              </div>
+                              <div className="text-xs" style={{ color: `${INK}60` }}>
+                                <span className="block">Avg Score: <span className="font-bold" style={{ color: MOSS }}>{child.averageScore || 0}%</span></span>
+                                <span className="block">Achievements: <span className="font-bold" style={{ color: BRASS }}>{child.achievements?.length || 0}</span></span>
+                                <span className="block">Last Active: <span className="font-bold" style={{ color: SLATE }}>{child.lastActive || 'Recently'}</span></span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm" style={{ color: `${INK}60` }}>No children linked to your account yet.</p>
+                  )}
                 </div>
               </Panel>
 
@@ -789,21 +839,25 @@ const ParentProfile = () => {
                   <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Recent Activities</h4>
                 </div>
                 <div className="space-y-3">
-                  {parentStats.recentActivities.map((activity, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                          style={{ backgroundColor: `${SLATE}15`, color: SLATE }}>
-                          {activity.child.charAt(0)}
+                  {parentStats.recentActivities && parentStats.recentActivities.length > 0 ? (
+                    parentStats.recentActivities.map((activity, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                            style={{ backgroundColor: `${SLATE}15`, color: SLATE }}>
+                            {activity.child?.charAt(0) || 'S'}
+                          </div>
+                          <div>
+                            <p className="text-sm">{activity.action || 'Activity'}</p>
+                            <p className="text-xs" style={{ color: `${INK}60` }}>{activity.child || 'System'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm">{activity.action}</p>
-                          <p className="text-xs" style={{ color: `${INK}60` }}>{activity.child}</p>
-                        </div>
+                        <span className="text-xs" style={{ color: `${INK}50` }}>{activity.time || 'Just now'}</span>
                       </div>
-                      <span className="text-xs" style={{ color: `${INK}50` }}>{activity.time}</span>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm" style={{ color: `${INK}60` }}>No recent activities.</p>
+                  )}
                 </div>
               </Panel>
             </div>
@@ -816,22 +870,26 @@ const ParentProfile = () => {
                   <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Family Goals</h4>
                 </div>
                 <div className="space-y-4">
-                  {parentStats.familyGoals.map((goal, idx) => (
-                    <div key={idx}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span style={{ color: `${INK}70` }}>{goal.title}</span>
-                        <span style={{ fontFamily: FONT_MONO, color: getProgressColor(goal.progress) }}>
-                          {goal.progress}%
-                        </span>
+                  {parentStats.familyGoals && parentStats.familyGoals.length > 0 ? (
+                    parentStats.familyGoals.map((goal, idx) => (
+                      <div key={idx}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span style={{ color: `${INK}70` }}>{goal.title}</span>
+                          <span style={{ fontFamily: FONT_MONO, color: getProgressColor(goal.progress || 0) }}>
+                            {goal.progress || 0}%
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
+                          <div className="h-full rounded-full" style={{
+                            width: `${goal.progress || 0}%`,
+                            backgroundColor: getProgressColor(goal.progress || 0)
+                          }} />
+                        </div>
                       </div>
-                      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
-                        <div className="h-full rounded-full" style={{
-                          width: `${goal.progress}%`,
-                          backgroundColor: getProgressColor(goal.progress)
-                        }} />
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm" style={{ color: `${INK}60` }}>No goals set yet.</p>
+                  )}
                 </div>
               </Panel>
 
@@ -844,19 +902,19 @@ const ParentProfile = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center p-2 border-b" style={{ borderColor: `${INK}0C` }}>
                     <span className="text-sm" style={{ color: `${INK}70` }}>Total Achievements</span>
-                    <span style={{ fontFamily: FONT_MONO, color: BRASS }}>{parentStats.totalAchievements}</span>
+                    <span style={{ fontFamily: FONT_MONO, color: BRASS }}>{parentStats.totalAchievements || 0}</span>
                   </div>
                   <div className="flex justify-between items-center p-2 border-b" style={{ borderColor: `${INK}0C` }}>
                     <span className="text-sm" style={{ color: `${INK}70` }}>Average Score</span>
-                    <span style={{ fontFamily: FONT_MONO, color: MOSS }}>{parentStats.averageScore}%</span>
+                    <span style={{ fontFamily: FONT_MONO, color: MOSS }}>{parentStats.averageScore || 0}%</span>
                   </div>
                   <div className="flex justify-between items-center p-2 border-b" style={{ borderColor: `${INK}0C` }}>
                     <span className="text-sm" style={{ color: `${INK}70` }}>Consistency Score</span>
-                    <span style={{ fontFamily: FONT_MONO, color: SLATE }}>{parentStats.consistencyScore}%</span>
+                    <span style={{ fontFamily: FONT_MONO, color: SLATE }}>{parentStats.consistencyScore || 0}%</span>
                   </div>
                   <div className="flex justify-between items-center p-2">
                     <span className="text-sm" style={{ color: `${INK}70` }}>Improvement Rate</span>
-                    <span style={{ fontFamily: FONT_MONO, color: MOSS }}>+{parentStats.improvementRate}%</span>
+                    <span style={{ fontFamily: FONT_MONO, color: MOSS }}>+{parentStats.improvementRate || 0}%</span>
                   </div>
                 </div>
               </Panel>
@@ -867,141 +925,162 @@ const ParentProfile = () => {
         {/* Children Tab - Detailed View */}
         {activeTab === 'children' && (
           <div className="space-y-4">
-            {parentStats.children.map((child) => (
-              <div key={child.id} className="p-4 rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold"
-                      style={{ backgroundColor: `${SLATE}15`, color: SLATE }}>
-                      {child.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-bold">{child.name}</p>
-                      <div className="flex items-center gap-3 text-xs" style={{ color: `${INK}60` }}>
-                        <span>Class {child.grade}</span>
-                        <span>•</span>
-                        <span>{child.school}</span>
-                        <span>•</span>
-                        <span style={{ color: getProgressColor(child.disciplineScore) }}>
-                          {child.disciplineScore}% discipline
-                        </span>
+            {parentStats.children && parentStats.children.length > 0 ? (
+              parentStats.children.map((child) => (
+                <div key={child.id} className="p-4 rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                  <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold"
+                        style={{ backgroundColor: `${SLATE}15`, color: SLATE }}>
+                        {child.name?.charAt(0) || '?'}
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-xs px-3 py-1 rounded-full" style={{
-                      backgroundColor: child.overallStatus === 'Outstanding' ? `${MOSS}15` :
-                        child.overallStatus === 'Excellent' ? `${SLATE}15` : `${BRASS}15`,
-                      color: child.overallStatus === 'Outstanding' ? MOSS :
-                        child.overallStatus === 'Excellent' ? SLATE : BRASS
-                    }}>
-                      {child.overallStatus}
-                    </span>
-                    <Stamp accent={SLATE} onClick={() => setShowChildDetails(showChildDetails === child.id ? null : child.id)}>
-                      {showChildDetails === child.id ? 'Hide Details' : 'View Details'}
-                    </Stamp>
-                  </div>
-                </div>
-
-                {showChildDetails === child.id && (
-                  <div className="mt-4 pt-4 border-t space-y-4" style={{ borderColor: `${INK}0C` }}>
-                    {/* Subjects */}
-                    <div>
-                      <h5 className="text-xs font-semibold mb-2" style={{ color: `${INK}70` }}>Subject Performance</h5>
-                      <div className="grid grid-cols-2 gap-3">
-                        {child.subjects.map((subject, idx) => (
-                          <div key={idx} className="p-2 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
-                            <div className="flex justify-between text-sm">
-                              <span>{subject.name}</span>
-                              <span style={{ color: getProgressColor(subject.score) }}>{subject.score}%</span>
-                            </div>
-                            <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
-                              <div className="h-full rounded-full" style={{
-                                width: `${subject.progress}%`,
-                                backgroundColor: getProgressColor(subject.score)
-                              }} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Streaks */}
-                    <div>
-                      <h5 className="text-xs font-semibold mb-2" style={{ color: `${INK}70` }}>Streaks</h5>
-                      <div className="flex gap-4">
-                        <div className="flex items-center gap-2 px-3 py-1 rounded-full" style={{ backgroundColor: `${MOSS}15` }}>
-                          <Flame className="w-3 h-3" style={{ color: MOSS }} />
-                          <span className="text-xs font-bold" style={{ color: MOSS }}>{child.studyStreak}d Study</span>
-                        </div>
-                        <div className="flex items-center gap-2 px-3 py-1 rounded-full" style={{ backgroundColor: `${SLATE}15` }}>
-                          <Dumbbell className="w-3 h-3" style={{ color: SLATE }} />
-                          <span className="text-xs font-bold" style={{ color: SLATE }}>{child.workoutStreak}d Workout</span>
-                        </div>
-                        <div className="flex items-center gap-2 px-3 py-1 rounded-full" style={{ backgroundColor: `${BRASS}15` }}>
-                          <ClipboardCheck className="w-3 h-3" style={{ color: BRASS }} />
-                          <span className="text-xs font-bold" style={{ color: BRASS }}>{child.habitStreak}d Habits</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Achievements */}
-                    <div>
-                      <h5 className="text-xs font-semibold mb-2" style={{ color: `${INK}70` }}>Achievements</h5>
-                      <div className="flex flex-wrap gap-2">
-                        {child.achievements.map((ach, idx) => (
-                          <span key={idx} className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${BRASS}15`, color: BRASS }}>
-                            🏅 {ach}
+                      <div>
+                        <p className="font-bold">{child.name || 'Unknown'}</p>
+                        <div className="flex items-center gap-3 text-xs" style={{ color: `${INK}60` }}>
+                          <span>Class {child.grade || 'N/A'}</span>
+                          <span>•</span>
+                          <span>{child.school || 'Not specified'}</span>
+                          <span>•</span>
+                          <span style={{ color: getProgressColor(child.disciplineScore || 0) }}>
+                            {child.disciplineScore || 0}% discipline
                           </span>
-                        ))}
+                        </div>
                       </div>
                     </div>
+                    <div className="flex gap-2">
+                      <span className="text-xs px-3 py-1 rounded-full" style={{
+                        backgroundColor: child.overallStatus === 'Outstanding' ? `${MOSS}15` :
+                          child.overallStatus === 'Excellent' ? `${SLATE}15` : `${BRASS}15`,
+                        color: child.overallStatus === 'Outstanding' ? MOSS :
+                          child.overallStatus === 'Excellent' ? SLATE : BRASS
+                      }}>
+                        {child.overallStatus || 'Good'}
+                      </span>
+                      <Stamp accent={SLATE} onClick={() => setShowChildDetails(showChildDetails === child.id ? null : child.id)}>
+                        {showChildDetails === child.id ? 'Hide Details' : 'View Details'}
+                      </Stamp>
+                    </div>
                   </div>
-                )}
+
+                  {showChildDetails === child.id && (
+                    <div className="mt-4 pt-4 border-t space-y-4" style={{ borderColor: `${INK}0C` }}>
+                      {/* Subjects */}
+                      <div>
+                        <h5 className="text-xs font-semibold mb-2" style={{ color: `${INK}70` }}>Subject Performance</h5>
+                        <div className="grid grid-cols-2 gap-3">
+                          {child.subjects && child.subjects.length > 0 ? (
+                            child.subjects.map((subject, idx) => (
+                              <div key={idx} className="p-2 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
+                                <div className="flex justify-between text-sm">
+                                  <span>{subject.name}</span>
+                                  <span style={{ color: getProgressColor(subject.score || 0) }}>{subject.score || 0}%</span>
+                                </div>
+                                <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
+                                  <div className="h-full rounded-full" style={{
+                                    width: `${subject.progress || 0}%`,
+                                    backgroundColor: getProgressColor(subject.score || 0)
+                                  }} />
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-xs" style={{ color: `${INK}60` }}>No subjects tracked yet.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Streaks */}
+                      <div>
+                        <h5 className="text-xs font-semibold mb-2" style={{ color: `${INK}70` }}>Streaks</h5>
+                        <div className="flex gap-4">
+                          <div className="flex items-center gap-2 px-3 py-1 rounded-full" style={{ backgroundColor: `${MOSS}15` }}>
+                            <Flame className="w-3 h-3" style={{ color: MOSS }} />
+                            <span className="text-xs font-bold" style={{ color: MOSS }}>{child.studyStreak || 0}d Study</span>
+                          </div>
+                          <div className="flex items-center gap-2 px-3 py-1 rounded-full" style={{ backgroundColor: `${SLATE}15` }}>
+                            <Dumbbell className="w-3 h-3" style={{ color: SLATE }} />
+                            <span className="text-xs font-bold" style={{ color: SLATE }}>{child.workoutStreak || 0}d Workout</span>
+                          </div>
+                          <div className="flex items-center gap-2 px-3 py-1 rounded-full" style={{ backgroundColor: `${BRASS}15` }}>
+                            <ClipboardCheck className="w-3 h-3" style={{ color: BRASS }} />
+                            <span className="text-xs font-bold" style={{ color: BRASS }}>{child.habitStreak || 0}d Habits</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Achievements */}
+                      <div>
+                        <h5 className="text-xs font-semibold mb-2" style={{ color: `${INK}70` }}>Achievements</h5>
+                        <div className="flex flex-wrap gap-2">
+                          {child.achievements && child.achievements.length > 0 ? (
+                            child.achievements.map((ach, idx) => (
+                              <span key={idx} className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${BRASS}15`, color: BRASS }}>
+                                🏅 {ach}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs" style={{ color: `${INK}60` }}>No achievements yet</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="p-8 text-center rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                <p style={{ color: `${INK}60` }}>No children linked to your account yet.</p>
+                <p className="text-sm mt-2" style={{ color: `${INK}40` }}>Ask your children to link your account as their parent.</p>
               </div>
-            ))}
+            )}
           </div>
         )}
 
         {/* Progress Tab */}
         {activeTab === 'progress' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {parentStats.children.map((child) => (
-              <Panel key={child.id}>
-                <h4 className="font-semibold mb-3" style={{ fontFamily: FONT_DISPLAY }}>{child.name}'s Progress</h4>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span style={{ color: `${INK}70` }}>Overall Progress</span>
-                      <span style={{ fontFamily: FONT_MONO, color: getProgressColor(child.disciplineScore) }}>
-                        {child.disciplineScore}%
-                      </span>
+            {parentStats.children && parentStats.children.length > 0 ? (
+              parentStats.children.map((child) => (
+                <Panel key={child.id}>
+                  <h4 className="font-semibold mb-3" style={{ fontFamily: FONT_DISPLAY }}>{child.name}'s Progress</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span style={{ color: `${INK}70` }}>Overall Progress</span>
+                        <span style={{ fontFamily: FONT_MONO, color: getProgressColor(child.disciplineScore || 0) }}>
+                          {child.disciplineScore || 0}%
+                        </span>
+                      </div>
+                      <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
+                        <div className="h-full rounded-full" style={{
+                          width: `${child.disciplineScore || 0}%`,
+                          backgroundColor: getProgressColor(child.disciplineScore || 0)
+                        }} />
+                      </div>
                     </div>
-                    <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
-                      <div className="h-full rounded-full" style={{
-                        width: `${child.disciplineScore}%`,
-                        backgroundColor: getProgressColor(child.disciplineScore)
-                      }} />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2 rounded-sm" style={{ backgroundColor: `${MOSS}10` }}>
-                      <p className="text-xs" style={{ color: `${INK}60` }}>Study</p>
-                      <p className="text-lg font-bold" style={{ color: MOSS }}>{child.studyStreak}d</p>
-                    </div>
-                    <div className="p-2 rounded-sm" style={{ backgroundColor: `${SLATE}10` }}>
-                      <p className="text-xs" style={{ color: `${INK}60` }}>Workout</p>
-                      <p className="text-lg font-bold" style={{ color: SLATE }}>{child.workoutStreak}d</p>
-                    </div>
-                    <div className="p-2 rounded-sm" style={{ backgroundColor: `${BRASS}10` }}>
-                      <p className="text-xs" style={{ color: `${INK}60` }}>Habits</p>
-                      <p className="text-lg font-bold" style={{ color: BRASS }}>{child.habitStreak}d</p>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="p-2 rounded-sm" style={{ backgroundColor: `${MOSS}10` }}>
+                        <p className="text-xs" style={{ color: `${INK}60` }}>Study</p>
+                        <p className="text-lg font-bold" style={{ color: MOSS }}>{child.studyStreak || 0}d</p>
+                      </div>
+                      <div className="p-2 rounded-sm" style={{ backgroundColor: `${SLATE}10` }}>
+                        <p className="text-xs" style={{ color: `${INK}60` }}>Workout</p>
+                        <p className="text-lg font-bold" style={{ color: SLATE }}>{child.workoutStreak || 0}d</p>
+                      </div>
+                      <div className="p-2 rounded-sm" style={{ backgroundColor: `${BRASS}10` }}>
+                        <p className="text-xs" style={{ color: `${INK}60` }}>Habits</p>
+                        <p className="text-lg font-bold" style={{ color: BRASS }}>{child.habitStreak || 0}d</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Panel>
-            ))}
+                </Panel>
+              ))
+            ) : (
+              <div className="col-span-2 p-8 text-center rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                <p style={{ color: `${INK}60` }}>No children linked to your account yet.</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -1013,27 +1092,31 @@ const ParentProfile = () => {
               <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Family Goals & Progress</h4>
             </div>
             <div className="space-y-6">
-              {parentStats.familyGoals.map((goal, idx) => (
-                <div key={idx}>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-medium">{goal.title}</span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm" style={{ color: `${INK}60}` }}>
-                        Target: {goal.target}
-                      </span>
-                      <span className="text-sm font-bold" style={{ color: getProgressColor(goal.progress) }}>
-                        {goal.progress}%
-                      </span>
+              {parentStats.familyGoals && parentStats.familyGoals.length > 0 ? (
+                parentStats.familyGoals.map((goal, idx) => (
+                  <div key={idx}>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-medium">{goal.title}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm" style={{ color: `${INK}60` }}>
+                          Target: {goal.target}
+                        </span>
+                        <span className="text-sm font-bold" style={{ color: getProgressColor(goal.progress || 0) }}>
+                          {goal.progress || 0}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
+                      <div className="h-full rounded-full transition-all" style={{
+                        width: `${goal.progress || 0}%`,
+                        backgroundColor: getProgressColor(goal.progress || 0)
+                      }} />
                     </div>
                   </div>
-                  <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
-                    <div className="h-full rounded-full transition-all" style={{
-                      width: `${goal.progress}%`,
-                      backgroundColor: getProgressColor(goal.progress)
-                    }} />
-                  </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-sm" style={{ color: `${INK}60` }}>No goals set yet. Start tracking your family's progress!</p>
+              )}
             </div>
           </Panel>
         )}

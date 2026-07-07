@@ -14,19 +14,21 @@ const {
   getQuizResults
 } = require('../controllers/studyController');
 
+// Import resource functions from teacherController
+const {
+  getStudyResources,
+  getResourceById,
+  downloadResource,
+  viewResource
+} = require('../controllers/teacherController');
+
 // All routes require authentication
 router.use(auth);
 
-// Get study progress
+// Study progress
 router.get('/progress', getStudyProgress);
-
-// Get study stats
 router.get('/stats', getStudyStats);
-
-// Log study session
 router.post('/log-session', logStudySession);
-
-// Update subject progress
 router.put('/subject', updateSubjectProgress);
 
 // Quiz routes
@@ -35,5 +37,11 @@ router.get('/quizzes/:quizId', getQuizById);
 router.post('/quizzes/:quizId/start', startQuiz);
 router.post('/quizzes/:quizId/answer', submitAnswer);
 router.get('/quizzes/:quizId/results', getQuizResults);
+
+// Resource routes - these will serve resources to students
+router.get('/resources', getStudyResources);
+router.get('/resources/:id', getResourceById);
+router.get('/resources/:id/download', downloadResource);
+router.get('/resources/:id/view', viewResource);
 
 module.exports = router;

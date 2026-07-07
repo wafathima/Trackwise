@@ -1,8 +1,9 @@
-// src/components/MentorProfile.jsx - Fixed version
+// src/components/MentorProfile.jsx
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import profileService from '../services/profileService';
+import mentorService from '../services/mentorService';
 import logo from '../assets/logo.png';
 import {
   Mail,
@@ -16,12 +17,7 @@ import {
   X,
   Camera,
   TrendingUp,
-  BarChart3,
   Clock,
-  CheckCircle,
-  Trophy,
-  Target,
-  Heart,
   Trash2,
   RefreshCw,
   AlertCircle,
@@ -36,11 +32,8 @@ import {
   Activity,
   Calendar,
   Briefcase,
-  GraduationCap,
-  BookOpen,
   Search,
   ChevronRight,
-  UserPlus
 } from 'lucide-react';
 
 const INK = '#1C2B39';
@@ -88,99 +81,21 @@ const MentorProfile = () => {
   const [profileImage, setProfileImage] = useState(user?.profileImage || null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Mentor data
+  // Real data states
   const [mentorData, setMentorData] = useState({
     mentorInfo: {
-      totalMentees: 8,
-      activeMentees: 6,
-      totalSessions: 124,
-      avgRating: 4.8,
-      specialties: ['Academic Counseling', 'Career Guidance', 'Personal Development'],
-      expertise: ['Mathematics', 'Physics', 'Computer Science'],
-      languages: ['English', 'Hindi', 'Malayalam'],
+      totalMentees: 0,
+      activeMentees: 0,
+      totalSessions: 0,
+      avgRating: 0,
+      specialties: [],
+      expertise: [],
+      languages: [],
     },
-    mentees: [
-      {
-        id: 1,
-        name: 'Rahul Sharma',
-        grade: '12th',
-        stream: 'Science',
-        joinedDate: '2024-01-15',
-        sessionsCompleted: 24,
-        goals: ['Improve Math score', 'Prepare for JEE', 'Time management'],
-        progress: {
-          academic: 85,
-          confidence: 75,
-          communication: 80,
-          overall: 82
-        },
-        recentSessions: [
-          { date: '2024-01-20', topic: 'Calculus - Integration', duration: 45, notes: 'Good progress' },
-          { date: '2024-01-18', topic: 'Physics - Mechanics', duration: 60, notes: 'Needs practice' },
-        ],
-        upcomingSessions: [
-          { date: '2024-01-22', topic: 'Mathematics - Trigonometry', duration: 45 },
-        ],
-        status: 'Active'
-      },
-      {
-        id: 2,
-        name: 'Priya Patel',
-        grade: '11th',
-        stream: 'Commerce',
-        joinedDate: '2024-01-10',
-        sessionsCompleted: 18,
-        goals: ['Improve Economics', 'Build confidence', 'Career planning'],
-        progress: {
-          academic: 78,
-          confidence: 70,
-          communication: 85,
-          overall: 78
-        },
-        recentSessions: [
-          { date: '2024-01-19', topic: 'Economics - Market Structures', duration: 50, notes: 'Good understanding' },
-        ],
-        upcomingSessions: [
-          { date: '2024-01-23', topic: 'Economics - Macroeconomics', duration: 50 }
-        ],
-        status: 'Active'
-      },
-      {
-        id: 3,
-        name: 'Amit Kumar',
-        grade: '10th',
-        stream: 'General',
-        joinedDate: '2024-01-05',
-        sessionsCompleted: 12,
-        goals: ['Improve overall grades', 'Study techniques', 'Reduce stress'],
-        progress: {
-          academic: 65,
-          confidence: 60,
-          communication: 70,
-          overall: 68
-        },
-        recentSessions: [
-          { date: '2024-01-17', topic: 'Math - Algebra', duration: 45, notes: 'Needs more practice' },
-        ],
-        upcomingSessions: [
-          { date: '2024-01-21', topic: 'Science - Physics', duration: 45 }
-        ],
-        status: 'Active'
-      }
-    ],
-    upcomingSessions: [
-      { id: 1, mentee: 'Rahul Sharma', topic: 'Mathematics - Trigonometry', date: '2024-01-22', time: '4:00 PM', duration: 45 },
-      { id: 2, mentee: 'Priya Patel', topic: 'Economics - Macroeconomics', date: '2024-01-23', time: '4:30 PM', duration: 50 },
-      { id: 3, mentee: 'Amit Kumar', topic: 'Science - Physics', date: '2024-01-21', time: '3:00 PM', duration: 45 }
-    ],
-    recentActivities: [
-      { mentee: 'Rahul Sharma', action: 'Showed improvement in Calculus', time: '2 hours ago' },
-      { mentee: 'Priya Patel', action: 'Achieved 85% in Economics test', time: '4 hours ago' },
-      { mentee: 'Amit Kumar', action: 'Completed Study Skills session', time: '1 day ago' }
-    ],
-    pendingRequests: [
-      { id: 1, name: 'Neha Gupta', grade: '11th', stream: 'Science', requestDate: '2024-01-19', message: 'Need guidance for JEE preparation' }
-    ]
+    mentees: [],
+    upcomingSessions: [],
+    recentActivities: [],
+    pendingRequests: []
   });
 
   const [stats, setStats] = useState({
@@ -190,8 +105,8 @@ const MentorProfile = () => {
     totalHours: 0,
     completedTasks: 0,
     achievementPoints: 0,
-    rank: 'Platinum',
-    level: 'Expert',
+    rank: 'Bronze',
+    level: 'Beginner',
     badges: 0,
     consistency: 0
   });
@@ -207,32 +122,187 @@ const MentorProfile = () => {
   }, []);
 
   useEffect(() => {
-    fetchProfileData();
+    fetchAllData();
   }, []);
 
-  const fetchProfileData = async () => {
+  const fetchAllData = async () => {
     setIsLoading(true);
     setError('');
     try {
-      const profileData = await profileService.getProfile();
-      if (profileData) {
+      // Fetch all data in parallel
+      const [
+        profileData,
+        statsData,
+        mentorStatsData,
+        menteesData,
+        mentorProfileData
+      ] = await Promise.allSettled([
+        profileService.getProfile(),
+        profileService.getUserStats(),
+        mentorService.getMentorStats().catch(() => null),
+        mentorService.getMentees().catch(() => []),
+        mentorService.getMentorProfile().catch(() => null)
+      ]);
+
+      // 1. Profile Data
+      if (profileData.status === 'fulfilled' && profileData.value) {
+        const data = profileData.value;
         setFormData({
-          name: profileData.name || user?.name || '',
-          email: profileData.email || user?.email || '',
-          phone: profileData.phone || '',
-          location: profileData.location || '',
-          bio: profileData.bio || '',
-          role: profileData.role || 'Mentor',
-          specialization: profileData.specialization || '',
-          yearsOfExperience: profileData.yearsOfExperience || '',
-          organization: profileData.organization || '',
-          availability: profileData.availability || 'Available',
+          name: data.name || user?.name || '',
+          email: data.email || user?.email || '',
+          phone: data.phone || '',
+          location: data.location || '',
+          bio: data.bio || '',
+          role: data.role || 'Mentor',
+          specialization: data.specialization || '',
+          yearsOfExperience: data.yearsOfExperience || '',
+          organization: data.organization || '',
+          availability: data.availability || 'Available',
         });
-        if (profileData.profileImage) setProfileImage(profileData.profileImage);
+        if (data.profileImage) setProfileImage(data.profileImage);
       }
+
+      // 2. User Stats
+      if (statsData.status === 'fulfilled' && statsData.value) {
+        setStats(statsData.value);
+      }
+
+      // 3. Mentor Stats
+      let mentorStats = null;
+      if (mentorStatsData.status === 'fulfilled' && mentorStatsData.value) {
+        mentorStats = mentorStatsData.value;
+      }
+
+      // 4. Mentees Data
+      let mentees = [];
+      if (menteesData.status === 'fulfilled' && menteesData.value) {
+        mentees = menteesData.value;
+      }
+
+      // 5. Mentor Profile Data
+      let mentorProfile = null;
+      if (mentorProfileData.status === 'fulfilled' && mentorProfileData.value) {
+        mentorProfile = mentorProfileData.value;
+      }
+
+      // Calculate mentor info from real data
+      const totalMentees = mentees.length || 0;
+      const activeMentees = mentees.filter(m => 
+        m.status === 'Active' || m.status === 'active'
+      ).length || 0;
+      
+      // Calculate total sessions and average rating from mentees data
+      let totalSessions = 0;
+      let totalRating = 0;
+      let ratingCount = 0;
+      
+      mentees.forEach(mentee => {
+        totalSessions += mentee.sessionsCompleted || 0;
+        if (mentee.rating) {
+          totalRating += mentee.rating;
+          ratingCount++;
+        }
+      });
+
+      const avgRating = ratingCount > 0 ? Math.round((totalRating / ratingCount) * 10) / 10 : 0;
+
+      // Get specialties and expertise from mentee data
+      const specialties = [...new Set(mentees.flatMap(m => m.specialties || []))];
+      const expertise = [...new Set(mentees.flatMap(m => m.expertise || []))];
+
+      // Build mentees with full details
+      const menteesWithDetails = mentees.map(mentee => ({
+        id: mentee.id || mentee._id,
+        name: mentee.name || 'Unknown',
+        grade: mentee.grade || 'N/A',
+        stream: mentee.stream || 'General',
+        joinedDate: mentee.joinedDate || new Date().toISOString().split('T')[0],
+        sessionsCompleted: mentee.sessionsCompleted || 0,
+        goals: mentee.goals || ['Improve overall performance'],
+        progress: mentee.progress || {
+          academic: 0,
+          confidence: 0,
+          communication: 0,
+          overall: 0
+        },
+        recentSessions: mentee.recentSessions || [],
+        upcomingSessions: mentee.upcomingSessions || [],
+        status: mentee.status || 'Active',
+        rating: mentee.rating || 0,
+        email: mentee.email || '',
+        phone: mentee.phone || ''
+      }));
+
+      // Build upcoming sessions from mentees data
+      const allUpcomingSessions = [];
+      menteesWithDetails.forEach(mentee => {
+        if (mentee.upcomingSessions && mentee.upcomingSessions.length > 0) {
+          mentee.upcomingSessions.forEach(session => {
+            allUpcomingSessions.push({
+              id: session.id || session._id || `sess_${Date.now()}`,
+              mentee: mentee.name,
+              topic: session.topic || 'General Session',
+              date: session.date || new Date().toISOString().split('T')[0],
+              time: session.time || '4:00 PM',
+              duration: session.duration || 45,
+              status: session.status || 'scheduled'
+            });
+          });
+        }
+      });
+
+      // Build recent activities
+      const recentActivities = [];
+      menteesWithDetails.forEach(mentee => {
+        if (mentee.recentSessions && mentee.recentSessions.length > 0) {
+          mentee.recentSessions.slice(0, 2).forEach(session => {
+            recentActivities.push({
+              mentee: mentee.name,
+              action: `Completed session on ${session.topic || 'General'}`,
+              time: session.date || 'Recently'
+            });
+          });
+        }
+      });
+
+      // Update mentor data
+      setMentorData({
+        mentorInfo: {
+          totalMentees,
+          activeMentees,
+          totalSessions: totalSessions || 0,
+          avgRating: avgRating || 0,
+          specialties: specialties.length > 0 ? specialties : ['Academic Counseling', 'Career Guidance'],
+          expertise: expertise.length > 0 ? expertise : ['General'],
+          languages: ['English', 'Hindi'] // Default or from profile
+        },
+        mentees: menteesWithDetails,
+        upcomingSessions: allUpcomingSessions.slice(0, 5),
+        recentActivities: recentActivities.length > 0 ? recentActivities : [
+          { mentee: 'System', action: 'Welcome to your mentor dashboard!', time: 'Just now' }
+        ],
+        pendingRequests: [] // You can add a separate endpoint for this
+      });
+
     } catch (error) {
-      console.error('Error fetching profile data:', error);
-      setError('Failed to load profile data');
+      console.error('Error fetching mentor data:', error);
+      setError('Failed to load profile data. Please refresh the page.');
+      // Set default data
+      setMentorData({
+        mentorInfo: {
+          totalMentees: 0,
+          activeMentees: 0,
+          totalSessions: 0,
+          avgRating: 0,
+          specialties: ['Academic Counseling', 'Career Guidance'],
+          expertise: ['General'],
+          languages: ['English'],
+        },
+        mentees: [],
+        upcomingSessions: [],
+        recentActivities: [{ mentee: 'System', action: 'No activities yet', time: 'Just now' }],
+        pendingRequests: []
+      });
     } finally {
       setIsLoading(false);
     }
@@ -262,10 +332,16 @@ const MentorProfile = () => {
 
   const handleCancel = () => {
     setFormData({
-      name: user?.name || '', email: user?.email || '', phone: user?.phone || '',
-      location: user?.location || '', bio: user?.bio || '', role: user?.role || 'Mentor',
-      specialization: user?.specialization || '', yearsOfExperience: user?.yearsOfExperience || '',
-      organization: user?.organization || '', availability: user?.availability || 'Available'
+      name: user?.name || '', 
+      email: user?.email || '', 
+      phone: user?.phone || '',
+      location: user?.location || '', 
+      bio: user?.bio || '', 
+      role: user?.role || 'Mentor',
+      specialization: user?.specialization || '', 
+      yearsOfExperience: user?.yearsOfExperience || '',
+      organization: user?.organization || '', 
+      availability: user?.availability || 'Available'
     });
     setIsEditing(false);
     setError('');
@@ -415,17 +491,21 @@ const MentorProfile = () => {
   const getStatusBadge = (status) => {
     const colors = {
       Active: { bg: `${MOSS}15`, color: MOSS, icon: '🟢' },
+      active: { bg: `${MOSS}15`, color: MOSS, icon: '🟢' },
       Pending: { bg: `${BRASS}15`, color: BRASS, icon: '🟡' },
+      pending: { bg: `${BRASS}15`, color: BRASS, icon: '🟡' },
       Completed: { bg: `${SLATE}15`, color: SLATE, icon: '🔵' },
-      Inactive: { bg: `${REDINK}15`, color: REDINK, icon: '🔴' }
+      completed: { bg: `${SLATE}15`, color: SLATE, icon: '🔵' },
+      Inactive: { bg: `${REDINK}15`, color: REDINK, icon: '🔴' },
+      inactive: { bg: `${REDINK}15`, color: REDINK, icon: '🔴' }
     };
     return colors[status] || colors.Active;
   };
 
   const filteredMentees = mentorData.mentees.filter(mentee =>
-    mentee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    mentee.grade.includes(searchTerm) ||
-    mentee.stream.toLowerCase().includes(searchTerm.toLowerCase())
+    mentee.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    mentee.grade?.includes(searchTerm) ||
+    mentee.stream?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (isLoading) {
@@ -613,15 +693,15 @@ const MentorProfile = () => {
 
         {/* Mentor Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          <StatCard icon={<Users className="w-4 h-4" />} value={mentorData.mentorInfo.totalMentees} label="Total Mentees" accent={REDINK} />
-          <StatCard icon={<UserCheck className="w-4 h-4" />} value={mentorData.mentorInfo.activeMentees} label="Active Mentees" accent={MOSS} />
-          <StatCard icon={<MessageSquare className="w-4 h-4" />} value={mentorData.mentorInfo.totalSessions} label="Sessions Completed" accent={BRASS} />
-          <StatCard icon={<Star className="w-4 h-4" />} value={`${mentorData.mentorInfo.avgRating}/5`} label="Avg Rating" accent={GOLD} />
+          <StatCard icon={<Users className="w-4 h-4" />} value={mentorData.mentorInfo.totalMentees || 0} label="Total Mentees" accent={REDINK} />
+          <StatCard icon={<UserCheck className="w-4 h-4" />} value={mentorData.mentorInfo.activeMentees || 0} label="Active Mentees" accent={MOSS} />
+          <StatCard icon={<MessageSquare className="w-4 h-4" />} value={mentorData.mentorInfo.totalSessions || 0} label="Sessions Completed" accent={BRASS} />
+          <StatCard icon={<Star className="w-4 h-4" />} value={`${mentorData.mentorInfo.avgRating || 0}/5`} label="Avg Rating" accent={GOLD} />
         </div>
 
         {/* Tabs */}
         <div className="flex gap-1 border-b" style={{ borderColor: `${INK}14` }}>
-          {['overview', 'mentees', 'sessions', 'requests'].map((tab) => (
+          {['overview', 'mentees', 'sessions'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -647,18 +727,22 @@ const MentorProfile = () => {
                   <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Recent Activities</h4>
                 </div>
                 <div className="space-y-3">
-                  {mentorData.recentActivities.map((activity, idx) => (
-                    <div key={idx} className="flex items-center gap-3 p-2 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                        style={{ backgroundColor: `${REDINK}15`, color: REDINK }}>
-                        {activity.mentee.charAt(0)}
+                  {mentorData.recentActivities && mentorData.recentActivities.length > 0 ? (
+                    mentorData.recentActivities.map((activity, idx) => (
+                      <div key={idx} className="flex items-center gap-3 p-2 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                          style={{ backgroundColor: `${REDINK}15`, color: REDINK }}>
+                          {activity.mentee?.charAt(0) || 'S'}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm">{activity.action || 'Activity'}</p>
+                          <p className="text-xs" style={{ color: `${INK}60` }}>{activity.mentee || 'System'} • {activity.time || 'Recently'}</p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm">{activity.action}</p>
-                        <p className="text-xs" style={{ color: `${INK}60` }}>{activity.mentee} • {activity.time}</p>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm" style={{ color: `${INK}60` }}>No recent activities.</p>
+                  )}
                 </div>
               </Panel>
 
@@ -669,29 +753,33 @@ const MentorProfile = () => {
                   <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Mentee Progress</h4>
                 </div>
                 <div className="space-y-3">
-                  {mentorData.mentees.map((mentee) => (
-                    <div key={mentee.id} className="p-3 rounded-sm border" style={{ borderColor: `${INK}0C` }}>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium">{mentee.name}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full" style={{
-                          backgroundColor: `${getProgressColor(mentee.progress.overall)}15`,
-                          color: getProgressColor(mentee.progress.overall)
-                        }}>
-                          {mentee.progress.overall}%
-                        </span>
+                  {mentorData.mentees && mentorData.mentees.length > 0 ? (
+                    mentorData.mentees.slice(0, 3).map((mentee) => (
+                      <div key={mentee.id} className="p-3 rounded-sm border" style={{ borderColor: `${INK}0C` }}>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-medium">{mentee.name}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full" style={{
+                            backgroundColor: `${getProgressColor(mentee.progress?.overall || 0)}15`,
+                            color: getProgressColor(mentee.progress?.overall || 0)
+                          }}>
+                            {mentee.progress?.overall || 0}%
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
+                          <div className="h-full rounded-full" style={{
+                            width: `${mentee.progress?.overall || 0}%`,
+                            backgroundColor: getProgressColor(mentee.progress?.overall || 0)
+                          }} />
+                        </div>
+                        <div className="flex gap-3 mt-2 text-xs" style={{ color: `${INK}60` }}>
+                          <span>Academic: {mentee.progress?.academic || 0}%</span>
+                          <span>Confidence: {mentee.progress?.confidence || 0}%</span>
+                        </div>
                       </div>
-                      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
-                        <div className="h-full rounded-full" style={{
-                          width: `${mentee.progress.overall}%`,
-                          backgroundColor: getProgressColor(mentee.progress.overall)
-                        }} />
-                      </div>
-                      <div className="flex gap-3 mt-2 text-xs" style={{ color: `${INK}60` }}>
-                        <span>Academic: {mentee.progress.academic}%</span>
-                        <span>Confidence: {mentee.progress.confidence}%</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm" style={{ color: `${INK}60` }}>No mentees assigned yet.</p>
+                  )}
                 </div>
               </Panel>
             </div>
@@ -704,46 +792,42 @@ const MentorProfile = () => {
                   <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Upcoming Sessions</h4>
                 </div>
                 <div className="space-y-3">
-                  {mentorData.upcomingSessions.map((session) => (
-                    <div key={session.id} className="p-3 rounded-sm" style={{ backgroundColor: `${BRASS}05`, border: `1px solid ${BRASS}20` }}>
-                      <p className="text-sm font-medium">{session.mentee}</p>
-                      <p className="text-xs" style={{ color: `${INK}60` }}>{session.topic}</p>
-                      <div className="flex justify-between mt-2 text-xs" style={{ color: `${INK}50` }}>
-                        <span>{session.date}</span>
-                        <span>{session.time}</span>
-                        <span>{session.duration} min</span>
+                  {mentorData.upcomingSessions && mentorData.upcomingSessions.length > 0 ? (
+                    mentorData.upcomingSessions.slice(0, 3).map((session, idx) => (
+                      <div key={idx} className="p-3 rounded-sm" style={{ backgroundColor: `${BRASS}05`, border: `1px solid ${BRASS}20` }}>
+                        <p className="text-sm font-medium">{session.mentee}</p>
+                        <p className="text-xs" style={{ color: `${INK}60` }}>{session.topic}</p>
+                        <div className="flex justify-between mt-2 text-xs" style={{ color: `${INK}50` }}>
+                          <span>{session.date}</span>
+                          <span>{session.time}</span>
+                          <span>{session.duration} min</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm" style={{ color: `${INK}60` }}>No upcoming sessions.</p>
+                  )}
                 </div>
               </Panel>
 
-              {/* Pending Requests */}
-              {mentorData.pendingRequests.length > 0 && (
-                <Panel>
-                  <div className="flex items-center gap-2 mb-4">
-                    <UserPlus className="w-5 h-5" style={{ color: BRASS }} />
-                    <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Pending Requests</h4>
-                  </div>
-                  <div className="space-y-3">
-                    {mentorData.pendingRequests.map((request) => (
-                      <div key={request.id} className="p-3 rounded-sm" style={{ backgroundColor: `${BRASS}05`, border: `1px solid ${BRASS}20` }}>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="text-sm font-medium">{request.name}</p>
-                            <p className="text-xs" style={{ color: `${INK}60` }}>Class {request.grade} • {request.stream}</p>
-                            <p className="text-xs mt-1" style={{ color: `${INK}50` }}>"{request.message}"</p>
-                          </div>
-                          <div className="flex gap-1">
-                            <button className="text-xs px-2 py-1 rounded" style={{ backgroundColor: MOSS, color: 'white' }}>Accept</button>
-                            <button className="text-xs px-2 py-1 rounded" style={{ backgroundColor: `${REDINK}15`, color: REDINK }}>Decline</button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Panel>
-              )}
+              {/* Mentor Specialties */}
+              <Panel>
+                <div className="flex items-center gap-2 mb-4">
+                  <Award className="w-5 h-5" style={{ color: GOLD }} />
+                  <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Specialties</h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {mentorData.mentorInfo.specialties && mentorData.mentorInfo.specialties.length > 0 ? (
+                    mentorData.mentorInfo.specialties.map((specialty, idx) => (
+                      <span key={idx} className="text-xs px-3 py-1 rounded-full" style={{ backgroundColor: `${GOLD}15`, color: GOLD }}>
+                        {specialty}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm" style={{ color: `${INK}60` }}>No specialties listed.</p>
+                  )}
+                </div>
+              </Panel>
             </div>
           </div>
         )}
@@ -763,117 +847,116 @@ const MentorProfile = () => {
               />
             </div>
 
-            {filteredMentees.map((mentee) => {
-              const status = getStatusBadge(mentee.status);
-              const isExpanded = selectedMentee === mentee.id;
-              
-              return (
-                <div key={mentee.id} className="p-4 rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                        style={{ backgroundColor: `${REDINK}15`, color: REDINK }}>
-                        {mentee.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-medium">{mentee.name}</p>
-                        <div className="flex items-center gap-3 text-xs" style={{ color: `${INK}60` }}>
-                          <span>Class {mentee.grade}</span>
-                          <span>{mentee.stream}</span>
-                          <span>Joined: {mentee.joinedDate}</span>
+            {mentorData.mentees && mentorData.mentees.length > 0 ? (
+              filteredMentees.map((mentee) => {
+                const status = getStatusBadge(mentee.status);
+                const isExpanded = selectedMentee === mentee.id;
+                
+                return (
+                  <div key={mentee.id} className="p-4 rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
+                          style={{ backgroundColor: `${REDINK}15`, color: REDINK }}>
+                          {mentee.name?.charAt(0) || '?'}
+                        </div>
+                        <div>
+                          <p className="font-medium">{mentee.name}</p>
+                          <div className="flex items-center gap-3 text-xs" style={{ color: `${INK}60` }}>
+                            <span>Class {mentee.grade}</span>
+                            <span>{mentee.stream}</span>
+                            <span>Joined: {mentee.joinedDate}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs px-2 py-0.5 rounded-full" style={{
-                          backgroundColor: status.bg,
-                          color: status.color
-                        }}>
-                          {status.icon} {mentee.status}
-                        </span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-0.5 rounded-full" style={{
+                            backgroundColor: status.bg,
+                            color: status.color
+                          }}>
+                            {status.icon} {mentee.status}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedMentee(isExpanded ? null : mentee.id)}
+                          className="text-xs px-3 py-1 rounded-full flex items-center gap-1"
+                          style={{ backgroundColor: `${REDINK}15`, color: REDINK }}
+                        >
+                          {isExpanded ? 'Hide Details' : 'View Details'}
+                          <ChevronRight className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => setSelectedMentee(isExpanded ? null : mentee.id)}
-                        className="text-xs px-3 py-1 rounded-full flex items-center gap-1"
-                        style={{ backgroundColor: `${REDINK}15`, color: REDINK }}
-                      >
-                        {isExpanded ? 'Hide Details' : 'View Details'}
-                        <ChevronRight className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                      </button>
                     </div>
+
+                    {isExpanded && (
+                      <div className="mt-4 pt-4 border-t space-y-4" style={{ borderColor: `${INK}0C` }}>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="p-2 rounded-sm text-center" style={{ backgroundColor: `${MOSS}05` }}>
+                            <p className="text-xs" style={{ color: `${INK}60` }}>Academic</p>
+                            <p className="text-lg font-bold" style={{ color: getProgressColor(mentee.progress?.academic || 0) }}>
+                              {mentee.progress?.academic || 0}%
+                            </p>
+                          </div>
+                          <div className="p-2 rounded-sm text-center" style={{ backgroundColor: `${SLATE}05` }}>
+                            <p className="text-xs" style={{ color: `${INK}60` }}>Confidence</p>
+                            <p className="text-lg font-bold" style={{ color: getProgressColor(mentee.progress?.confidence || 0) }}>
+                              {mentee.progress?.confidence || 0}%
+                            </p>
+                          </div>
+                          <div className="p-2 rounded-sm text-center" style={{ backgroundColor: `${BRASS}05` }}>
+                            <p className="text-xs" style={{ color: `${INK}60` }}>Communication</p>
+                            <p className="text-lg font-bold" style={{ color: getProgressColor(mentee.progress?.communication || 0) }}>
+                              {mentee.progress?.communication || 0}%
+                            </p>
+                          </div>
+                          <div className="p-2 rounded-sm text-center" style={{ backgroundColor: `${GOLD}05` }}>
+                            <p className="text-xs" style={{ color: `${INK}60` }}>Overall</p>
+                            <p className="text-lg font-bold" style={{ color: getProgressColor(mentee.progress?.overall || 0) }}>
+                              {mentee.progress?.overall || 0}%
+                            </p>
+                          </div>
+                        </div>
+
+                        {mentee.goals && mentee.goals.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold mb-1" style={{ color: `${INK}60` }}>Goals</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {mentee.goals.map((goal, idx) => (
+                                <span key={idx} className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${MOSS}10`, color: MOSS }}>
+                                  🎯 {goal}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {mentee.recentSessions && mentee.recentSessions.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold mb-1" style={{ color: `${INK}60` }}>Recent Sessions</p>
+                            <div className="space-y-1.5">
+                              {mentee.recentSessions.slice(0, 3).map((session, idx) => (
+                                <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
+                                  <span>{session.date}</span>
+                                  <span style={{ color: `${INK}70` }}>{session.topic}</span>
+                                  <span style={{ color: `${INK}50` }}>{session.duration} min</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-
-                  {isExpanded && (
-                    <div className="mt-4 pt-4 border-t space-y-4" style={{ borderColor: `${INK}0C` }}>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="p-2 rounded-sm text-center" style={{ backgroundColor: `${MOSS}05` }}>
-                          <p className="text-xs" style={{ color: `${INK}60` }}>Academic</p>
-                          <p className="text-lg font-bold" style={{ color: getProgressColor(mentee.progress.academic) }}>
-                            {mentee.progress.academic}%
-                          </p>
-                        </div>
-                        <div className="p-2 rounded-sm text-center" style={{ backgroundColor: `${SLATE}05` }}>
-                          <p className="text-xs" style={{ color: `${INK}60` }}>Confidence</p>
-                          <p className="text-lg font-bold" style={{ color: getProgressColor(mentee.progress.confidence) }}>
-                            {mentee.progress.confidence}%
-                          </p>
-                        </div>
-                        <div className="p-2 rounded-sm text-center" style={{ backgroundColor: `${BRASS}05` }}>
-                          <p className="text-xs" style={{ color: `${INK}60` }}>Communication</p>
-                          <p className="text-lg font-bold" style={{ color: getProgressColor(mentee.progress.communication) }}>
-                            {mentee.progress.communication}%
-                          </p>
-                        </div>
-                        <div className="p-2 rounded-sm text-center" style={{ backgroundColor: `${GOLD}05` }}>
-                          <p className="text-xs" style={{ color: `${INK}60` }}>Overall</p>
-                          <p className="text-lg font-bold" style={{ color: getProgressColor(mentee.progress.overall) }}>
-                            {mentee.progress.overall}%
-                          </p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-semibold mb-1" style={{ color: `${INK}60` }}>Goals</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {mentee.goals.map((goal, idx) => (
-                            <span key={idx} className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${MOSS}10`, color: MOSS }}>
-                              🎯 {goal}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-semibold mb-1" style={{ color: `${INK}60` }}>Recent Sessions</p>
-                        <div className="space-y-1.5">
-                          {mentee.recentSessions.map((session, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
-                              <span>{session.date}</span>
-                              <span style={{ color: `${INK}70` }}>{session.topic}</span>
-                              <span style={{ color: `${INK}50` }}>{session.duration} min</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-semibold mb-1" style={{ color: `${INK}60` }}>Upcoming Sessions</p>
-                        <div className="space-y-1.5">
-                          {mentee.upcomingSessions.map((session, idx) => (
-                            <div key={idx} className="flex items-center justify-between text-xs p-2 rounded-sm" style={{ backgroundColor: `${BRASS}08` }}>
-                              <span>{session.date}</span>
-                              <span style={{ color: `${INK}70` }}>{session.topic}</span>
-                              <span style={{ color: `${INK}50` }}>{session.duration} min</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div className="p-8 text-center rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                <Users className="w-12 h-12 mx-auto mb-3" style={{ color: `${INK}30` }} />
+                <p style={{ color: `${INK}60` }}>No mentees assigned yet</p>
+                <p className="text-sm" style={{ color: `${INK}40` }}>Mentees will appear here once they're assigned to you</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -883,67 +966,27 @@ const MentorProfile = () => {
             <Panel>
               <div className="flex items-center gap-2 mb-4">
                 <Calendar className="w-5 h-5" style={{ color: BRASS }} />
-                <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Upcoming Sessions</h4>
+                <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>All Sessions</h4>
               </div>
               <div className="space-y-3">
-                {mentorData.upcomingSessions.map((session) => (
-                  <div key={session.id} className="flex items-center justify-between p-3 rounded-sm" style={{ backgroundColor: `${BRASS}05`, border: `1px solid ${BRASS}20` }}>
-                    <div>
-                      <p className="font-medium">{session.mentee}</p>
-                      <p className="text-sm" style={{ color: `${INK}60` }}>{session.topic}</p>
+                {mentorData.upcomingSessions && mentorData.upcomingSessions.length > 0 ? (
+                  mentorData.upcomingSessions.map((session, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-sm" style={{ backgroundColor: `${BRASS}05`, border: `1px solid ${BRASS}20` }}>
+                      <div>
+                        <p className="font-medium">{session.mentee}</p>
+                        <p className="text-sm" style={{ color: `${INK}60` }}>{session.topic}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium" style={{ color: BRASS }}>{session.time}</p>
+                        <p className="text-xs" style={{ color: `${INK}50` }}>{session.date} • {session.duration} min</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium" style={{ color: BRASS }}>{session.time}</p>
-                      <p className="text-xs" style={{ color: `${INK}50` }}>{session.date} • {session.duration} min</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-sm text-center" style={{ color: `${INK}60` }}>No sessions scheduled.</p>
+                )}
               </div>
             </Panel>
-          </div>
-        )}
-
-        {/* Requests Tab */}
-        {activeTab === 'requests' && (
-          <div className="space-y-4">
-            {mentorData.pendingRequests.length > 0 ? (
-              mentorData.pendingRequests.map((request) => (
-                <div key={request.id} className="p-4 rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                          style={{ backgroundColor: `${BRASS}15`, color: BRASS }}>
-                          {request.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-medium">{request.name}</p>
-                          <p className="text-xs" style={{ color: `${INK}60` }}>Class {request.grade} • {request.stream}</p>
-                        </div>
-                      </div>
-                      <p className="text-sm mt-2" style={{ color: `${INK}70` }}>"{request.message}"</p>
-                      <p className="text-xs mt-1" style={{ color: `${INK}50` }}>Requested on: {request.requestDate}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button className="px-4 py-2 rounded-sm text-sm font-medium" style={{ backgroundColor: MOSS, color: 'white' }}>
-                        Accept
-                      </button>
-                      <button className="px-4 py-2 rounded-sm text-sm font-medium border" style={{ borderColor: `${INK}22`, color: `${INK}70` }}>
-                        Decline
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <Panel>
-                <div className="text-center py-8">
-                  <UserPlus className="w-12 h-12 mx-auto mb-3" style={{ color: `${INK}30` }} />
-                  <p style={{ color: `${INK}60` }}>No pending requests</p>
-                  <p className="text-sm" style={{ color: `${INK}40` }}>New mentee requests will appear here</p>
-                </div>
-              </Panel>
-            )}
           </div>
         )}
 

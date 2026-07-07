@@ -1,8 +1,9 @@
-// src/components/TeacherProfile.jsx - Fixed version
+// src/components/TeacherProfile.jsx
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import profileService from '../services/profileService';
+import teacherService from '../services/teacherService';
 import logo from '../assets/logo.png';
 import {
   Mail,
@@ -88,93 +89,29 @@ const TeacherProfile = () => {
   const [profileImage, setProfileImage] = useState(user?.profileImage || null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Teacher data
+  // Teacher data - initialized with empty/default values
   const [teacherData, setTeacherData] = useState({
     teacherInfo: {
-      totalStudents: 45,
-      activeStudents: 40,
-      classes: ['10th', '11th', '12th'],
-      subjects: ['Mathematics', 'Physics'],
-      averageScore: 82,
-      passRate: 92,
-      totalHours: 320,
-      assignmentsGiven: 156,
-      assignmentsGraded: 142,
-      studentsImproved: 32,
-      totalAchievements: 18,
-      avgRating: 4.7,
+      totalStudents: 0,
+      activeStudents: 0,
+      classes: [],
+      subjects: [],
+      averageScore: 0,
+      passRate: 0,
+      totalHours: 0,
+      assignmentsGiven: 0,
+      assignmentsGraded: 0,
+      studentsImproved: 0,
+      totalAchievements: 0,
+      avgRating: 0,
     },
-    classPerformance: {
-      '10th': 85,
-      '11th': 78,
-      '12th': 82
-    },
-    weeklyClasses: [8, 7, 9, 6, 8, 0, 0],
-    students: [
-      {
-        id: 1,
-        name: 'Alex Mercer',
-        grade: '10th',
-        subject: 'Mathematics',
-        score: 88,
-        progress: 12,
-        attendance: 95,
-        assignmentsCompleted: 8,
-        status: 'Excellent'
-      },
-      {
-        id: 2,
-        name: 'Sarah Connor',
-        grade: '10th',
-        subject: 'Physics',
-        score: 92,
-        progress: 15,
-        attendance: 98,
-        assignmentsCompleted: 10,
-        status: 'Outstanding'
-      },
-      {
-        id: 3,
-        name: 'Mike Johnson',
-        grade: '11th',
-        subject: 'Mathematics',
-        score: 72,
-        progress: 8,
-        attendance: 85,
-        assignmentsCompleted: 6,
-        status: 'Improving'
-      },
-      {
-        id: 4,
-        name: 'Emma Wilson',
-        grade: '12th',
-        subject: 'Physics',
-        score: 78,
-        progress: 10,
-        attendance: 90,
-        assignmentsCompleted: 7,
-        status: 'Good'
-      }
-    ],
-    recentActivities: [
-      { student: 'Alex Mercer', action: 'Completed advanced math assignment', time: '2 hours ago', type: 'assignment' },
-      { student: 'Sarah Connor', action: 'Scored 95% in Physics test', time: '4 hours ago', type: 'test' },
-      { student: 'Mike Johnson', action: 'Improved math score by 10%', time: '1 day ago', type: 'improvement' }
-    ],
-    topStudents: [
-      { name: 'Sarah Connor', score: 92, subject: 'Physics' },
-      { name: 'Alex Mercer', score: 88, subject: 'Mathematics' },
-      { name: 'Emma Wilson', score: 78, subject: 'Physics' }
-    ],
-    upcomingClasses: [
-      { title: 'Algebra II - 10th', time: '9:00 AM', date: 'Today' },
-      { title: 'Physics - 11th', time: '11:00 AM', date: 'Today' },
-      { title: 'Math - 12th', time: '2:00 PM', date: 'Today' }
-    ],
-    subjectDistribution: {
-      Mathematics: 25,
-      Physics: 20
-    }
+    classPerformance: {},
+    weeklyClasses: [0, 0, 0, 0, 0, 0, 0],
+    students: [],
+    recentActivities: [],
+    topStudents: [],
+    upcomingClasses: [],
+    subjectDistribution: {}
   });
 
   const [stats, setStats] = useState({
@@ -184,8 +121,8 @@ const TeacherProfile = () => {
     totalHours: 0,
     completedTasks: 0,
     achievementPoints: 0,
-    rank: 'Platinum',
-    level: 'Expert',
+    rank: 'Bronze',
+    level: 'Beginner',
     badges: 0,
     consistency: 0
   });
@@ -201,14 +138,16 @@ const TeacherProfile = () => {
   }, []);
 
   useEffect(() => {
-    fetchProfileData();
+    fetchAllData();
   }, []);
 
-  const fetchProfileData = async () => {
+  const fetchAllData = async () => {
     setIsLoading(true);
     setError('');
     try {
+      // Fetch profile data for basic info
       const profileData = await profileService.getProfile();
+      
       if (profileData) {
         setFormData({
           name: profileData.name || user?.name || '',
@@ -224,9 +163,113 @@ const TeacherProfile = () => {
         });
         if (profileData.profileImage) setProfileImage(profileData.profileImage);
       }
+
+      // Fetch teacher stats from backend
+      try {
+        const statsData = await teacherService.getTeacherStats();
+        if (statsData) {
+          setTeacherData(prev => ({
+            ...prev,
+            teacherInfo: {
+              totalStudents: statsData.totalStudents || 0,
+              activeStudents: statsData.activeStudents || 0,
+              classes: statsData.classes || ['10th', '11th', '12th'],
+              subjects: statsData.subjects || ['Mathematics'],
+              averageScore: statsData.averageScore || 0,
+              passRate: statsData.passRate || 0,
+              totalHours: statsData.totalHours || 0,
+              assignmentsGiven: statsData.assignmentsGiven || 0,
+              assignmentsGraded: statsData.assignmentsGraded || 0,
+              studentsImproved: statsData.studentsImproved || 0,
+              totalAchievements: statsData.totalAchievements || 0,
+              avgRating: statsData.avgRating || 0,
+            },
+            classPerformance: statsData.classPerformance || {},
+            weeklyClasses: statsData.weeklyClasses || [0, 0, 0, 0, 0, 0, 0],
+            subjectDistribution: statsData.subjectDistribution || {}
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching teacher stats:', err);
+      }
+
+      // Fetch students
+      try {
+        const studentsData = await teacherService.getStudents(selectedClass === 'all' ? null : selectedClass);
+        if (studentsData && studentsData.length > 0) {
+          setTeacherData(prev => ({
+            ...prev,
+            students: studentsData
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching students:', err);
+      }
+
+      // Fetch recent activities
+      try {
+        const activitiesData = await teacherService.getRecentActivities();
+        if (activitiesData && activitiesData.length > 0) {
+          setTeacherData(prev => ({
+            ...prev,
+            recentActivities: activitiesData
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching activities:', err);
+      }
+
+      // Fetch top students
+      try {
+        const topStudentsData = await teacherService.getTopStudents();
+        if (topStudentsData && topStudentsData.length > 0) {
+          setTeacherData(prev => ({
+            ...prev,
+            topStudents: topStudentsData
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching top students:', err);
+      }
+
+      // Fetch classes
+      try {
+        const classesData = await teacherService.getClasses();
+        if (classesData && classesData.length > 0) {
+          setTeacherData(prev => ({
+            ...prev,
+            teacherInfo: {
+              ...prev.teacherInfo,
+              classes: classesData
+            }
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching classes:', err);
+      }
+
+      // Build upcoming classes from teacher data
+      const classes = teacherData.teacherInfo.classes || ['10th', '11th', '12th'];
+      const subjects = teacherData.teacherInfo.subjects || ['Mathematics'];
+      const today = new Date();
+      const upcoming = classes.slice(0, 3).map((cls, index) => {
+        const date = new Date(today);
+        date.setDate(date.getDate() + index);
+        return {
+          title: `${subjects[0] || 'Class'} - ${cls}`,
+          time: `${9 + index}:00 AM`,
+          date: index === 0 ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' })
+        };
+      });
+      
+      setTeacherData(prev => ({
+        ...prev,
+        upcomingClasses: upcoming
+      }));
+
     } catch (error) {
-      console.error('Error fetching profile data:', error);
-      setError('Failed to load profile data');
+      console.error('Error fetching teacher data:', error);
+      setError('Failed to load profile data. Please refresh the page.');
     } finally {
       setIsLoading(false);
     }
@@ -256,10 +299,16 @@ const TeacherProfile = () => {
 
   const handleCancel = () => {
     setFormData({
-      name: user?.name || '', email: user?.email || '', phone: user?.phone || '',
-      location: user?.location || '', bio: user?.bio || '', role: user?.role || 'Teacher',
-      subject: user?.subject || '', classes: user?.classes || '',
-      school: user?.school || '', yearsOfExperience: user?.yearsOfExperience || ''
+      name: user?.name || '', 
+      email: user?.email || '', 
+      phone: user?.phone || '',
+      location: user?.location || '', 
+      bio: user?.bio || '', 
+      role: user?.role || 'Teacher',
+      subject: user?.subject || '', 
+      classes: user?.classes || '',
+      school: user?.school || '', 
+      yearsOfExperience: user?.yearsOfExperience || ''
     });
     setIsEditing(false);
     setError('');
@@ -286,7 +335,7 @@ const TeacherProfile = () => {
       setSuccess('Profile image updated successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-      setError('Failed to upload image. Please try again.');
+      setError(error,'Failed to upload image. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -417,9 +466,9 @@ const TeacherProfile = () => {
     return colors[status] || INK;
   };
 
-  const filteredStudents = teacherData.students.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         student.subject.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredStudents = (teacherData.students || []).filter(student => {
+    const matchesSearch = student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         student.subject?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesClass = selectedClass === 'all' || student.grade === selectedClass;
     return matchesSearch && matchesClass;
   });
@@ -524,10 +573,7 @@ const TeacherProfile = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${BRASS}15`, color: BRASS, fontFamily: FONT_MONO }}>
-              <BookOpen className="w-3 h-3 inline mr-1" /> Teacher
-            </span>
-            {stats.rank && (
+            {stats.rank && stats.rank !== 'Bronze' && (
               <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: `${GOLD}15`, color: GOLD, fontFamily: FONT_MONO }}>
                 <Crown className="w-3 h-3 inline mr-1" /> {stats.rank}
               </span>
@@ -594,8 +640,8 @@ const TeacherProfile = () => {
                 <FieldRow icon={<Phone className="w-3.5 h-3.5 shrink-0" />} name="phone" value={formData.phone} editing={isEditing} />
                 <FieldRow icon={<MapPin className="w-3.5 h-3.5 shrink-0" />} name="location" value={formData.location} editing={isEditing} />
                 <FieldRow icon={<BookOpen className="w-3.5 h-3.5 shrink-0" />} name="subject" value={formData.subject} editing={isEditing} />
-                <FieldRow icon={<School className="w-3.5 h-3.5 shrink-0" />} name="classes" value={formData.classes} editing={isEditing} />
-                <FieldRow icon={<GraduationCap className="w-3.5 h-3.5 shrink-0" />} name="school" value={formData.school} editing={isEditing} />
+                {/* <FieldRow icon={<School className="w-3.5 h-3.5 shrink-0" />} name="classes" value={formData.classes} editing={isEditing} /> */}
+                <FieldRow icon={<School className="w-3.5 h-3.5 shrink-0" />} name="school" value={formData.school} editing={isEditing} />
                 <FieldRow icon={<Clock className="w-3.5 h-3.5 shrink-0" />} name="yearsOfExperience" value={formData.yearsOfExperience} editing={isEditing} />
               </div>
 
@@ -612,14 +658,14 @@ const TeacherProfile = () => {
 
         {/* Teacher Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          <StatCard icon={<Users className="w-4 h-4" />} value={teacherData.teacherInfo.totalStudents} label="Total Students" accent={BRASS} />
-          <StatCard icon={<UserCheck className="w-4 h-4" />} value={teacherData.teacherInfo.activeStudents} label="Active Students" accent={MOSS} />
-          <StatCard icon={<Award className="w-4 h-4" />} value={`${teacherData.teacherInfo.averageScore}%`} label="Avg Score" accent={SLATE} />
-          <StatCard icon={<TrendingUp className="w-4 h-4" />} value={`${teacherData.teacherInfo.passRate}%`} label="Pass Rate" accent={MOSS} />
-          <StatCard icon={<Clock className="w-4 h-4" />} value={`${teacherData.teacherInfo.totalHours}h`} label="Teaching Hours" accent={BRASS} />
-          <StatCard icon={<BookMarked className="w-4 h-4" />} value={teacherData.teacherInfo.assignmentsGiven} label="Assignments" accent={SLATE} />
-          <StatCard icon={<FileCheck className="w-4 h-4" />} value={teacherData.teacherInfo.assignmentsGraded} label="Graded" accent={MOSS} />
-          <StatCard icon={<Star className="w-4 h-4" />} value={`${teacherData.teacherInfo.avgRating}/5`} label="Rating" accent={GOLD} />
+          <StatCard icon={<Users className="w-4 h-4" />} value={teacherData.teacherInfo.totalStudents || 0} label="Total Students" accent={BRASS} />
+          <StatCard icon={<UserCheck className="w-4 h-4" />} value={teacherData.teacherInfo.activeStudents || 0} label="Active Students" accent={MOSS} />
+          <StatCard icon={<Award className="w-4 h-4" />} value={`${teacherData.teacherInfo.averageScore || 0}%`} label="Avg Score" accent={SLATE} />
+          <StatCard icon={<TrendingUp className="w-4 h-4" />} value={`${teacherData.teacherInfo.passRate || 0}%`} label="Pass Rate" accent={MOSS} />
+          <StatCard icon={<Clock className="w-4 h-4" />} value={`${teacherData.teacherInfo.totalHours || 0}h`} label="Teaching Hours" accent={BRASS} />
+          <StatCard icon={<BookMarked className="w-4 h-4" />} value={teacherData.teacherInfo.assignmentsGiven || 0} label="Assignments" accent={SLATE} />
+          <StatCard icon={<FileCheck className="w-4 h-4" />} value={teacherData.teacherInfo.assignmentsGraded || 0} label="Graded" accent={MOSS} />
+          <StatCard icon={<Star className="w-4 h-4" />} value={`${teacherData.teacherInfo.avgRating || 0}/5`} label="Rating" accent={GOLD} />
         </div>
 
         {/* Tabs */}
@@ -644,98 +690,106 @@ const TeacherProfile = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               {/* Class Performance */}
-              <Panel>
-                <div className="flex items-center gap-2 mb-4">
-                  <BarChart className="w-5 h-5" style={{ color: BRASS }} />
-                  <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Class Performance</h4>
-                </div>
-                <div className="space-y-4">
-                  {Object.entries(teacherData.classPerformance).map(([className, score]) => (
-                    <div key={className}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span style={{ color: `${INK}70` }}>Class {className}</span>
-                        <span style={{ fontFamily: FONT_MONO, color: getProgressColor(score) }}>
-                          {score}%
-                        </span>
-                      </div>
-                      <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
-                        <div className="h-full rounded-full" style={{
-                          width: `${score}%`,
-                          backgroundColor: getProgressColor(score)
-                        }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
-
-              {/* Top Students */}
-              <Panel>
-                <div className="flex items-center gap-2 mb-4">
-                  <Crown className="w-5 h-5" style={{ color: GOLD }} />
-                  <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Top Students</h4>
-                </div>
-                <div className="space-y-2">
-                  {teacherData.topStudents.map((student, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2 rounded-sm" style={{ backgroundColor: `${GOLD}05` }}>
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold" style={{ color: GOLD }}>#{idx + 1}</span>
-                        <span className="font-medium">{student.name}</span>
-                        <span className="text-xs" style={{ color: `${INK}60` }}>{student.subject}</span>
-                      </div>
-                      <span style={{ fontFamily: FONT_MONO, color: MOSS }}>{student.score}%</span>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
-
-              {/* Upcoming Classes */}
-              <Panel>
-                <div className="flex items-center gap-2 mb-4">
-                  <Calendar className="w-5 h-5" style={{ color: SLATE }} />
-                  <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Upcoming Classes</h4>
-                </div>
-                <div className="space-y-2">
-                  {teacherData.upcomingClasses.map((cls, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
-                      <div className="flex items-center gap-3">
-                        <BookOpen className="w-4 h-4" style={{ color: BRASS }} />
-                        <div>
-                          <p className="text-sm font-medium">{cls.title}</p>
-                          <p className="text-xs" style={{ color: `${INK}60` }}>{cls.date}</p>
+              {Object.keys(teacherData.classPerformance).length > 0 && (
+                <Panel>
+                  <div className="flex items-center gap-2 mb-4">
+                    <BarChart className="w-5 h-5" style={{ color: BRASS }} />
+                    <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Class Performance</h4>
+                  </div>
+                  <div className="space-y-4">
+                    {Object.entries(teacherData.classPerformance).map(([className, score]) => (
+                      <div key={className}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span style={{ color: `${INK}70` }}>Class {className}</span>
+                          <span style={{ fontFamily: FONT_MONO, color: getProgressColor(score) }}>
+                            {score}%
+                          </span>
+                        </div>
+                        <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
+                          <div className="h-full rounded-full" style={{
+                            width: `${score}%`,
+                            backgroundColor: getProgressColor(score)
+                          }} />
                         </div>
                       </div>
-                      <span className="text-xs font-medium" style={{ color: BRASS }}>{cls.time}</span>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
+                    ))}
+                  </div>
+                </Panel>
+              )}
+
+              {/* Top Students */}
+              {teacherData.topStudents && teacherData.topStudents.length > 0 && (
+                <Panel>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Crown className="w-5 h-5" style={{ color: GOLD }} />
+                    <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Top Students</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {teacherData.topStudents.slice(0, 5).map((student, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 rounded-sm" style={{ backgroundColor: `${GOLD}05` }}>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-bold" style={{ color: GOLD }}>#{idx + 1}</span>
+                          <span className="font-medium">{student.name}</span>
+                          <span className="text-xs" style={{ color: `${INK}60` }}>{student.subject}</span>
+                        </div>
+                        <span style={{ fontFamily: FONT_MONO, color: MOSS }}>{student.score}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              )}
+
+              {/* Upcoming Classes */}
+              {teacherData.upcomingClasses && teacherData.upcomingClasses.length > 0 && (
+                <Panel>
+                  <div className="flex items-center gap-2 mb-4">
+                    <Calendar className="w-5 h-5" style={{ color: SLATE }} />
+                    <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Upcoming Classes</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {teacherData.upcomingClasses.map((cls, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
+                        <div className="flex items-center gap-3">
+                          <BookOpen className="w-4 h-4" style={{ color: BRASS }} />
+                          <div>
+                            <p className="text-sm font-medium">{cls.title}</p>
+                            <p className="text-xs" style={{ color: `${INK}60` }}>{cls.date}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-medium" style={{ color: BRASS }}>{cls.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              )}
             </div>
 
             <div className="lg:col-span-1 space-y-6">
               {/* Subject Distribution */}
-              <Panel>
-                <div className="flex items-center gap-2 mb-4">
-                  <PieChart className="w-5 h-5" style={{ color: SLATE }} />
-                  <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Subject Distribution</h4>
-                </div>
-                <div className="space-y-2">
-                  {Object.entries(teacherData.subjectDistribution).map(([subject, count]) => (
-                    <div key={subject}>
-                      <div className="flex justify-between text-sm">
-                        <span style={{ color: `${INK}70` }}>{subject}</span>
-                        <span style={{ fontFamily: FONT_MONO, color: BRASS }}>{count}</span>
+              {Object.keys(teacherData.subjectDistribution).length > 0 && (
+                <Panel>
+                  <div className="flex items-center gap-2 mb-4">
+                    <PieChart className="w-5 h-5" style={{ color: SLATE }} />
+                    <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Subject Distribution</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {Object.entries(teacherData.subjectDistribution).map(([subject, count]) => (
+                      <div key={subject}>
+                        <div className="flex justify-between text-sm">
+                          <span style={{ color: `${INK}70` }}>{subject}</span>
+                          <span style={{ fontFamily: FONT_MONO, color: BRASS }}>{count}</span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
+                          <div className="h-full rounded-full" style={{
+                            width: `${(count / teacherData.teacherInfo.totalStudents) * 100}%`,
+                            backgroundColor: BRASS
+                          }} />
+                        </div>
                       </div>
-                      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
-                        <div className="h-full rounded-full" style={{
-                          width: `${(count / teacherData.teacherInfo.totalStudents) * 100}%`,
-                          backgroundColor: BRASS
-                        }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
+                    ))}
+                  </div>
+                </Panel>
+              )}
 
               {/* Quick Stats */}
               <Panel>
@@ -746,15 +800,15 @@ const TeacherProfile = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center p-2 border-b" style={{ borderColor: `${INK}0C` }}>
                     <span className="text-sm" style={{ color: `${INK}70` }}>Students Improved</span>
-                    <span style={{ fontFamily: FONT_MONO, color: MOSS }}>{teacherData.teacherInfo.studentsImproved}</span>
+                    <span style={{ fontFamily: FONT_MONO, color: MOSS }}>{teacherData.teacherInfo.studentsImproved || 0}</span>
                   </div>
                   <div className="flex justify-between items-center p-2 border-b" style={{ borderColor: `${INK}0C` }}>
                     <span className="text-sm" style={{ color: `${INK}70` }}>Total Achievements</span>
-                    <span style={{ fontFamily: FONT_MONO, color: BRASS }}>{teacherData.teacherInfo.totalAchievements}</span>
+                    <span style={{ fontFamily: FONT_MONO, color: BRASS }}>{teacherData.teacherInfo.totalAchievements || 0}</span>
                   </div>
                   <div className="flex justify-between items-center p-2">
                     <span className="text-sm" style={{ color: `${INK}70` }}>Avg Rating</span>
-                    <span style={{ fontFamily: FONT_MONO, color: GOLD }}>{teacherData.teacherInfo.avgRating}/5</span>
+                    <span style={{ fontFamily: FONT_MONO, color: GOLD }}>{teacherData.teacherInfo.avgRating || 0}/5</span>
                   </div>
                 </div>
               </Panel>
@@ -791,188 +845,159 @@ const TeacherProfile = () => {
               </select>
             </div>
 
-            {filteredStudents.map((student) => {
-              const isExpanded = selectedStudent === student.id;
-              return (
-                <div key={student.id} className="p-4 rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                        style={{ backgroundColor: `${BRASS}15`, color: BRASS }}>
-                        {student.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-medium">{student.name}</p>
-                        <div className="flex items-center gap-3 text-xs" style={{ color: `${INK}60` }}>
-                          <span>Class {student.grade}</span>
-                          <span>{student.subject}</span>
-                          <span>Attendance: {student.attendance}%</span>
+            {filteredStudents.length > 0 ? (
+              filteredStudents.map((student) => {
+                const isExpanded = selectedStudent === student.id;
+                return (
+                  <div key={student.id} className="p-4 rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
+                          style={{ backgroundColor: `${BRASS}15`, color: BRASS }}>
+                          {student.name?.charAt(0) || 'S'}
+                        </div>
+                        <div>
+                          <p className="font-medium">{student.name}</p>
+                          <div className="flex items-center gap-3 text-xs" style={{ color: `${INK}60` }}>
+                            <span>Class {student.grade}</span>
+                            <span>{student.subject}</span>
+                            <span>Attendance: {student.attendance || 0}%</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-center">
-                        <p className="text-sm" style={{ color: `${INK}60` }}>Score</p>
-                        <p className="text-lg font-bold" style={{ color: getProgressColor(student.score) }}>
-                          {student.score}%
-                        </p>
+                      <div className="flex items-center gap-4">
+                        <div className="text-center">
+                          <p className="text-sm" style={{ color: `${INK}60` }}>Score</p>
+                          <p className="text-lg font-bold" style={{ color: getProgressColor(student.score || 0) }}>
+                            {student.score || 0}%
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm" style={{ color: `${INK}60` }}>Progress</p>
+                          <p className="text-lg font-bold" style={{ color: MOSS }}>
+                            +{student.progress || 0}%
+                          </p>
+                        </div>
+                        <span className="text-xs px-2 py-1 rounded-full" style={{
+                          backgroundColor: `${getStatusColor(student.status)}15`,
+                          color: getStatusColor(student.status)
+                        }}>
+                          {student.status || 'Active'}
+                        </span>
+                        <button 
+                          onClick={() => setSelectedStudent(isExpanded ? null : student.id)}
+                          className="text-xs px-3 py-1 rounded-full flex items-center gap-1"
+                          style={{ backgroundColor: `${BRASS}15`, color: BRASS }}
+                        >
+                          {isExpanded ? 'Hide Details' : 'View Details'}
+                          <ChevronRight className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                        </button>
                       </div>
-                      <div className="text-center">
-                        <p className="text-sm" style={{ color: `${INK}60` }}>Progress</p>
-                        <p className="text-lg font-bold" style={{ color: MOSS }}>
-                          +{student.progress}%
-                        </p>
-                      </div>
-                      <span className="text-xs px-2 py-1 rounded-full" style={{
-                        backgroundColor: `${getStatusColor(student.status)}15`,
-                        color: getStatusColor(student.status)
-                      }}>
-                        {student.status}
-                      </span>
-                      <button 
-                        onClick={() => setSelectedStudent(isExpanded ? null : student.id)}
-                        className="text-xs px-3 py-1 rounded-full flex items-center gap-1"
-                        style={{ backgroundColor: `${BRASS}15`, color: BRASS }}
-                      >
-                        {isExpanded ? 'Hide Details' : 'View Details'}
-                        <ChevronRight className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                      </button>
                     </div>
-                  </div>
 
-                  {isExpanded && (
-                    <div className="mt-4 pt-4 border-t space-y-2" style={{ borderColor: `${INK}0C` }}>
-                      <div className="grid grid-cols-3 gap-3 text-sm">
-                        <div className="p-2 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
-                          <p className="text-xs" style={{ color: `${INK}60` }}>Assignments</p>
-                          <p className="font-bold">{student.assignmentsCompleted}</p>
-                        </div>
-                        <div className="p-2 rounded-sm" style={{ backgroundColor: `${MOSS}05` }}>
-                          <p className="text-xs" style={{ color: `${INK}60` }}>Attendance</p>
-                          <p className="font-bold" style={{ color: getProgressColor(student.attendance) }}>
-                            {student.attendance}%
-                          </p>
-                        </div>
-                        <div className="p-2 rounded-sm" style={{ backgroundColor: `${BRASS}05` }}>
-                          <p className="text-xs" style={{ color: `${INK}60` }}>Status</p>
-                          <p className="font-bold" style={{ color: getStatusColor(student.status) }}>
-                            {student.status}
-                          </p>
+                    {isExpanded && (
+                      <div className="mt-4 pt-4 border-t space-y-2" style={{ borderColor: `${INK}0C` }}>
+                        <div className="grid grid-cols-3 gap-3 text-sm">
+                          <div className="p-2 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
+                            <p className="text-xs" style={{ color: `${INK}60` }}>Assignments</p>
+                            <p className="font-bold">{student.assignmentsCompleted || 0}</p>
+                          </div>
+                          <div className="p-2 rounded-sm" style={{ backgroundColor: `${MOSS}05` }}>
+                            <p className="text-xs" style={{ color: `${INK}60` }}>Attendance</p>
+                            <p className="font-bold" style={{ color: getProgressColor(student.attendance || 0) }}>
+                              {student.attendance || 0}%
+                            </p>
+                          </div>
+                          <div className="p-2 rounded-sm" style={{ backgroundColor: `${BRASS}05` }}>
+                            <p className="text-xs" style={{ color: `${INK}60` }}>Status</p>
+                            <p className="font-bold" style={{ color: getStatusColor(student.status) }}>
+                              {student.status || 'Active'}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-8 text-center rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                <Users className="w-12 h-12 mx-auto mb-3" style={{ color: `${INK}30` }} />
+                <p style={{ color: `${INK}60` }}>No students found</p>
+                <p className="text-sm" style={{ color: `${INK}40` }}>Try adjusting your search or filters</p>
+              </div>
+            )}
           </div>
         )}
 
         {/* Classes Tab */}
         {activeTab === 'classes' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {teacherData.teacherInfo.classes.map((className) => (
-              <Panel key={className}>
-                <div className="flex items-center gap-3 mb-3">
-                  <BookOpen className="w-5 h-5" style={{ color: BRASS }} />
-                  <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600 }}>Class {className}</h4>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span style={{ color: `${INK}70` }}>Performance</span>
-                    <span style={{ fontFamily: FONT_MONO, color: getProgressColor(teacherData.classPerformance[className]) }}>
-                      {teacherData.classPerformance[className]}%
-                    </span>
+            {teacherData.teacherInfo.classes && teacherData.teacherInfo.classes.length > 0 ? (
+              teacherData.teacherInfo.classes.map((className) => (
+                <Panel key={className}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <BookOpen className="w-5 h-5" style={{ color: BRASS }} />
+                    <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600 }}>Class {className}</h4>
                   </div>
-                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
-                    <div className="h-full rounded-full" style={{
-                      width: `${teacherData.classPerformance[className]}%`,
-                      backgroundColor: getProgressColor(teacherData.classPerformance[className])
-                    }} />
-                  </div>
-                  <div className="flex justify-between text-xs" style={{ color: `${INK}60` }}>
-                    <span>Students: {teacherData.students.filter(s => s.grade === className).length}</span>
-                    <span>Subject: {teacherData.teacherInfo.subjects.join(', ')}</span>
-                  </div>
-                </div>
-              </Panel>
-            ))}
-          </div>
-        )}
-
-        {/* Performance Tab */}
-        {activeTab === 'performance' && (
-          <div className="space-y-6">
-            <Panel>
-              <div className="flex items-center gap-2 mb-4">
-                <LineChart className="w-5 h-5" style={{ color: MOSS }} />
-                <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Weekly Class Schedule</h4>
-              </div>
-              <div className="flex items-end gap-2 h-32">
-                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, idx) => (
-                  <div key={day} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                    <div className="w-full rounded-t-sm transition-all"
-                      style={{
-                        height: `${Math.max((teacherData.weeklyClasses[idx] / 9) * 100, teacherData.weeklyClasses[idx] > 0 ? 8 : 3)}%`,
-                        backgroundColor: teacherData.weeklyClasses[idx] > 0 ? BRASS : `${INK}14`,
-                        opacity: teacherData.weeklyClasses[idx] > 0 ? 0.85 : 1,
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span style={{ color: `${INK}70` }}>Performance</span>
+                      <span style={{ fontFamily: FONT_MONO, color: getProgressColor(teacherData.classPerformance[className] || 0) }}>
+                        {teacherData.classPerformance[className] || 0}%
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
+                      <div className="h-full rounded-full" style={{
+                        width: `${teacherData.classPerformance[className] || 0}%`,
+                        backgroundColor: getProgressColor(teacherData.classPerformance[className] || 0)
                       }} />
-                    <span className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}55` }}>{day}</span>
-                    <span className="text-[9px]" style={{ fontFamily: FONT_MONO, color: `${INK}55` }}>{teacherData.weeklyClasses[idx]}</span>
+                    </div>
+                    <div className="flex justify-between text-xs" style={{ color: `${INK}60` }}>
+                      <span>Students: {teacherData.students.filter(s => s.grade === className).length}</span>
+                      <span>Subject: {teacherData.teacherInfo.subjects?.join(', ') || 'N/A'}</span>
+                    </div>
                   </div>
-                ))}
+                </Panel>
+              ))
+            ) : (
+              <div className="col-span-full p-8 text-center rounded-sm border" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
+                <School className="w-12 h-12 mx-auto mb-3" style={{ color: `${INK}30` }} />
+                <p style={{ color: `${INK}60` }}>No classes assigned yet</p>
+                <p className="text-sm" style={{ color: `${INK}40` }}>Classes will appear here once assigned</p>
               </div>
-            </Panel>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Panel>
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="w-5 h-5" style={{ color: MOSS }} />
-                  <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Student Progress</h4>
-                </div>
-                <div className="space-y-3">
-                  {teacherData.students.slice(0, 5).map((student) => (
-                    <div key={student.id}>
-                      <div className="flex justify-between text-sm">
-                        <span style={{ color: `${INK}70` }}>{student.name}</span>
-                        <span style={{ fontFamily: FONT_MONO, color: getProgressColor(student.progress) }}>
-                          +{student.progress}%
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${INK}14` }}>
-                        <div className="h-full rounded-full" style={{
-                          width: `${student.progress}%`,
-                          backgroundColor: getProgressColor(student.progress)
-                        }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
-
-              <Panel>
-                <div className="flex items-center gap-2 mb-4">
-                  <Activity className="w-5 h-5" style={{ color: SLATE }} />
-                  <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Recent Activities</h4>
-                </div>
-                <div className="space-y-3">
-                  {teacherData.recentActivities.slice(0, 5).map((activity, idx) => (
-                    <div key={idx} className="flex items-center gap-3 p-2 rounded-sm" style={{ backgroundColor: `${SLATE}05` }}>
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                        style={{ backgroundColor: `${SLATE}15`, color: SLATE }}>
-                        {activity.student.charAt(0)}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm">{activity.action}</p>
-                        <p className="text-xs" style={{ color: `${INK}60` }}>{activity.student} • {activity.time}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
-            </div>
+            )}
           </div>
-        )}
+        )}   
+{/* Performance Tab */}
+{activeTab === 'performance' && (
+  <div className="space-y-6">
+    <Panel>
+      <div className="flex items-center gap-2 mb-4">
+        <LineChart className="w-5 h-5" style={{ color: MOSS }} />
+        <h4 style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: '1.1rem' }}>Weekly Class Schedule</h4>
+      </div>
+      <div className="flex items-end gap-2 h-32">
+        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => (
+          <div key={day} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+            <div className="w-full rounded-t-sm transition-all"
+              style={{
+                height: `${Math.max((teacherData.weeklyClasses[idx] / 9) * 100, teacherData.weeklyClasses[idx] > 0 ? 8 : 3)}%`,
+                backgroundColor: teacherData.weeklyClasses[idx] > 0 ? BRASS : `${INK}14`,
+                opacity: teacherData.weeklyClasses[idx] > 0 ? 0.85 : 1,
+              }} />
+            <span className="text-[10px]" style={{ fontFamily: FONT_MONO, color: `${INK}55` }}>
+              {day.substring(0, 1)} {/* Shows M, T, W, T, F, S, S */}
+            </span>
+            <span className="text-[9px]" style={{ fontFamily: FONT_MONO, color: `${INK}55` }}>
+              {teacherData.weeklyClasses[idx]}
+            </span>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  </div>
+)}
 
         {/* Danger Zone */}
         <div className="p-5 rounded-sm border relative overflow-hidden" style={{ backgroundColor: `${REDINK}08`, borderColor: `${REDINK}2E` }}>
