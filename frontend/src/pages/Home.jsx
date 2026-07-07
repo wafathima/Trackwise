@@ -1,4 +1,4 @@
-// Home.jsx - Updated with dropdown menu
+// Home.jsx - Updated with role-based profile routing
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -104,6 +104,30 @@ const Home = () => {
     navigate('/');
   };
 
+  // Role-based profile navigation
+  const handleProfileClick = () => {
+    setIsDropdownOpen(false);
+    if (!user) return;
+    
+    const role = user.role?.toLowerCase();
+    switch(role) {
+      case 'student':
+        navigate('/profile/student');
+        break;
+      case 'parent':
+        navigate('/profile/parent');
+        break;
+      case 'teacher':
+        navigate('/profile/teacher');
+        break;
+      case 'mentor':
+        navigate('/profile/mentor');
+        break;
+      default:
+        navigate('/profile');
+    }
+  };
+
   const serviceDetails = [
     {
       title: 'For Students',
@@ -174,7 +198,6 @@ const Home = () => {
     }
   ];
 
-  const getUserRole = () => (user && user.role) ? user.role : null;
   const getUserName = () => (user && user.name) ? user.name : '';
   const getUserInitials = () => {
     const name = getUserName();
@@ -296,10 +319,7 @@ const Home = () => {
                   {/* Menu Items */}
                   <div className="py-1">
                     <button
-                      onClick={() => {
-                        navigate('/profile');
-                        setIsDropdownOpen(false);
-                      }}
+                      onClick={handleProfileClick}
                       className="w-full px-4 py-2.5 text-sm flex items-center gap-3 transition-colors hover:bg-opacity-10"
                       style={{ 
                         color: `${INK}CC`,

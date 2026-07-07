@@ -132,6 +132,7 @@ const StudiesModule = () => {
     { icon: <BarChart3 className="w-4 h-4" />, label: 'Practice Tests', value: '100+' },
     { icon: <Award className="w-4 h-4" />, label: 'Achievements', value: '20+' },
   ];
+  // Time Complexity: O(1) for access, O(n) for iteration Array♦️
 
   return (
     <div className="min-h-screen relative" style={{ backgroundColor: PAPER, color: INK, fontFamily: FONT_BODY }}>

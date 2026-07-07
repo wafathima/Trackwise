@@ -7,7 +7,6 @@ const StudyProgressSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  // Streak tracking
   streak: {
     type: Number,
     default: 0
@@ -16,7 +15,6 @@ const StudyProgressSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
-  // Study metrics
   totalHours: {
     type: Number,
     default: 0
@@ -42,7 +40,6 @@ const StudyProgressSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  // Daily study logs
   dailyData: [{
     date: {
       type: Date,
@@ -58,7 +55,6 @@ const StudyProgressSchema = new mongoose.Schema({
     }],
     notes: String
   }],
-  // Recent activities
   activities: [{
     type: {
       type: String,
@@ -73,7 +69,6 @@ const StudyProgressSchema = new mongoose.Schema({
     duration: Number,
     score: Number
   }],
-  // Subject-wise progress
   subjects: [{
     name: String,
     progress: {
@@ -93,15 +88,10 @@ const StudyProgressSchema = new mongoose.Schema({
       score: Number,
       attemptedAt: Date
     }]
-  }],
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
+  }]
 }, { timestamps: true });
 
-module.exports = mongoose.model('StudyProgress', StudyProgressSchema);
+// Check if model already exists before creating
+const StudyProgress = mongoose.models.StudyProgress || mongoose.model('StudyProgress', StudyProgressSchema);
+
+module.exports = StudyProgress;

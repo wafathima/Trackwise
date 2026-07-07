@@ -68,7 +68,9 @@ const fs = require('fs');
 const authRoutes = require('./routes/authRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const adminRoutes = require('./routes/admin/adminRoutes'); 
-
+const studyRoutes = require('./routes/studyRoutes');
+const healthRoutes = require('./routes/healthRoutes');
+const habitRoutes = require('./routes/habitRoutes');
 
 const app = express();
 
@@ -100,6 +102,9 @@ if (!fs.existsSync('uploads/profiles')) {
 app.use('/api/admin', adminRoutes);  
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/study', studyRoutes);
+app.use('/api/health', healthRoutes);
+app.use('/api/habits', habitRoutes);
 
 
 

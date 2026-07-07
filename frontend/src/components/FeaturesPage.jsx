@@ -18,9 +18,7 @@ import {
 } from 'lucide-react';
 import logo from '../assets/logo.png';
 
-/* ---------------------------------------------------------------------- */
-/*  TOKENS — shared with the Student Ledger dashboard                     */
-/* ---------------------------------------------------------------------- */
+
 const INK = '#1C2B39';
 const PAPER = '#F1EBDA';
 const CARD = '#FBF8EF';

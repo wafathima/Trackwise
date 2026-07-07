@@ -1,3 +1,4 @@
+// src/components/StudentDashboard.jsx
 import { useState, useEffect } from 'react';
 import {
   BookOpen,
@@ -21,6 +22,11 @@ import {
   Timer,
   Volume2,
 } from 'lucide-react';
+import StudyTracker from './StudyTracker';
+import HealthTracker from './HealthTracker';
+import HabitTracker from './HabitTracker';
+import QuizModal from './QuizModal';
+import quizService from '../services/quizService';
 
 /* ---------------------------------------------------------------------- */
 /*  TOKENS                                                                 */
@@ -38,8 +44,20 @@ const FONT_DISPLAY = "'Fraunces', serif";
 const FONT_BODY = "'Work Sans', sans-serif";
 const FONT_MONO = "'IBM Plex Mono', monospace";
 
-const TAB_ACCENTS = { studies: MOSS, health: SLATE, habits: REDINK, communication: BRASS };
-const TAB_LABELS = { studies: 'Studies', health: 'Health', habits: 'Habits', communication: 'Voice' };
+const TAB_ACCENTS = { 
+  studies: MOSS, 
+  health: SLATE, 
+  habits: REDINK, 
+  communication: BRASS 
+};
+
+const TAB_LABELS = { 
+  studies: 'Studies', 
+  health: 'Health', 
+  habits: 'Habits', 
+  communication: 'Voice' 
+};
+
 const TAB_ICONS = {
   studies: <BookOpen className="w-3.5 h-3.5" />,
   health: <Dumbbell className="w-3.5 h-3.5" />,
@@ -54,6 +72,7 @@ const polar = (cx, cy, r, angleDeg) => {
   const rad = (angleDeg * Math.PI) / 180;
   return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
 };
+
 const arcPath = (cx, cy, r, startAngle, endAngle) => {
   const s = polar(cx, cy, r, startAngle);
   const e = polar(cx, cy, r, endAngle);
@@ -63,8 +82,8 @@ const arcPath = (cx, cy, r, startAngle, endAngle) => {
 
 const StudentDashboard = ({ user }) => {
   const [activeTab, setActiveTab] = useState('studies');
-  const [selectedClass, setSelectedClass] = useState(user?.classGroup || '10th');
-  const [selectedSubject, setSelectedSubject] = useState('Mathematics');
+  const [selectedClass] = useState(user?.classGroup || '10th');
+  const [selectedSubject] = useState('Mathematics');
   const [selectedWorkoutLevel, setSelectedWorkoutLevel] = useState('beginner');
   const [selectedCategory, setSelectedCategory] = useState('fitness');
   const [showPomodoro, setShowPomodoro] = useState(false);
@@ -75,6 +94,11 @@ const StudentDashboard = ({ user }) => {
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [completedHabits, setCompletedHabits] = useState([]);
+
+  // ✅ Only ONE quizzes state
+  const [quizzes, setQuizzes] = useState([]);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
+  const [showQuizModal, setShowQuizModal] = useState(false);
 
   const [disciplineScore] = useState(87);
   const [streaks] = useState({ study: 5, workout: 3, habit: 7 });
@@ -95,12 +119,6 @@ const StudentDashboard = ({ user }) => {
     { id: 5, title: 'Organic Chemistry Guide', type: 'material', subject: 'Chemistry', pages: 25 },
   ]);
 
-  const [quizzes] = useState([
-    { id: 1, title: 'Algebra Quiz', subject: 'Mathematics', questions: 10, score: 85, completed: true },
-    { id: 2, title: 'Physics Quiz', subject: 'Physics', questions: 8, score: 92, completed: true },
-    { id: 3, title: 'Chemistry Quiz', subject: 'Chemistry', questions: 12, score: 0, completed: false },
-  ]);
-
   const [workouts] = useState([
     { id: 1, title: 'Beginner Push-up Program', level: 'beginner', category: 'fitness', duration: '20 mins', exercises: ['Push-ups', 'Squats', 'Planks'] },
     { id: 2, title: 'Advanced Calisthenics', level: 'advanced', category: 'calisthenics', duration: '45 mins', exercises: ['Muscle-ups', 'Handstands', 'L-sits'] },
@@ -119,8 +137,10 @@ const StudentDashboard = ({ user }) => {
     if (score >= 50) return { label: 'Needs Improvement', color: BRASS };
     return { label: 'Needs Attention', color: REDINK };
   };
+
   const getScoreColor = (score) => (score >= 80 ? MOSS : score >= 60 ? BRASS : REDINK);
   const toggleSection = (section) => setExpandedSection(expandedSection === section ? null : section);
+  
   const toggleHabit = (habitId) => {
     if (completedHabits.includes(habitId)) {
       setCompletedHabits(completedHabits.filter((id) => id !== habitId));
@@ -130,6 +150,7 @@ const StudentDashboard = ({ user }) => {
     }
   };
 
+  // Timer effect
   useEffect(() => {
     let interval = null;
     if (isTimerRunning) {
@@ -150,6 +171,28 @@ const StudentDashboard = ({ user }) => {
     }
     return () => clearInterval(interval);
   }, [isTimerRunning, timerMinutes, timerSeconds]);
+
+  // Fetch quizzes on mount
+  const fetchQuizzes = async () => {
+    try {
+      const data = await quizService.getQuizzes();
+      setQuizzes(data);
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+    }
+  };
+
+  const handleStartQuiz = (quizId) => {
+    const quiz = quizzes.find(q => q.id === quizId);
+    if (quiz) {
+      setSelectedQuiz(quiz);
+      setShowQuizModal(true);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuizzes();
+  }, []);
 
   const startTimer = () => setIsTimerRunning(true);
   const pauseTimer = () => setIsTimerRunning(false);
@@ -381,6 +424,7 @@ const StudentDashboard = ({ user }) => {
           {/* Studies Tab */}
           {activeTab === 'studies' && (
             <div className="space-y-6">
+              {/* Quick Stats */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard icon={<BookOpen className="w-5 h-5" />} value={studyMaterials.length} label="Study Materials" accent={MOSS} />
                 <StatCard icon={<CheckCircle className="w-5 h-5" />} value={`${quizzes.filter((q) => q.completed).length}/${quizzes.length}`} label="Quizzes Completed" accent={SLATE} />
@@ -388,13 +432,8 @@ const StudentDashboard = ({ user }) => {
                 <StatCard icon={<Award className="w-5 h-5" />} value={2} label="Badges Earned" accent={REDINK} />
               </div>
 
+              {/* Subject Selector */}
               <div className="p-4 rounded-sm border flex flex-wrap items-center gap-4" style={{ backgroundColor: CARD, borderColor: `${INK}14` }}>
-                <div className="flex items-center gap-2">
-                  <label className="text-xs" style={{ fontFamily: FONT_MONO, color: `${INK}90` }}>CLASS</label>
-                  <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className="sd-select text-sm rounded-sm px-3 py-1.5 border" style={selectStyle}>
-                    {['7th', '8th', '9th', '10th', '11th', '12th'].map((cls) => (<option key={cls} value={cls}>{cls} Standard</option>))}
-                  </select>
-                </div>
                 <div className="flex items-center gap-2">
                   <label className="text-xs" style={{ fontFamily: FONT_MONO, color: `${INK}90` }}>SUBJECT</label>
                   <select value={selectedSubject} onChange={(e) => setSelectedSubject(e.target.value)} className="sd-select text-sm rounded-sm px-3 py-1.5 border" style={selectStyle}>
@@ -411,6 +450,7 @@ const StudentDashboard = ({ user }) => {
                 </div>
               </div>
 
+              {/* Pomodoro Timer */}
               {showPomodoro && (
                 <Card style={{ backgroundColor: `${MOSS}0A`, borderColor: `${MOSS}33` }}>
                   <div className="flex justify-between items-center mb-4">
@@ -429,6 +469,7 @@ const StudentDashboard = ({ user }) => {
                 </Card>
               )}
 
+              {/* Doubt Assistant */}
               {showDoubtAssistant && (
                 <Card style={{ backgroundColor: `${SLATE}0A`, borderColor: `${SLATE}33` }}>
                   <div className="flex justify-between items-center mb-4">
@@ -447,8 +488,15 @@ const StudentDashboard = ({ user }) => {
                 </Card>
               )}
 
+              {/* Study Materials */}
               <div>
-                <SectionHeading eyebrow="Reference" title="Study Materials" accent={MOSS} action={expandedSection === 'materials' ? 'Show less' : 'View all'} onAction={() => toggleSection('materials')} />
+                <SectionHeading 
+                  eyebrow="Reference" 
+                  title="Study Materials" 
+                  accent={MOSS} 
+                  action={expandedSection === 'materials' ? 'Show less' : 'View all'} 
+                  onAction={() => toggleSection('materials')} 
+                />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {studyMaterials.slice(0, expandedSection === 'materials' ? undefined : 3).map((m) => (
                     <Card key={m.id} style={{ backgroundColor: CARD }}>
@@ -468,28 +516,57 @@ const StudentDashboard = ({ user }) => {
                 </div>
               </div>
 
+              {/* Quizzes */}
               <div>
                 <SectionHeading eyebrow="Assessment" title="Quizzes" accent={MOSS} />
                 <div className="space-y-2">
-                  {quizzes.map((quiz) => (
-                    <Card key={quiz.id} style={{ backgroundColor: CARD }}>
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium">{quiz.title}</p>
-                          <div className="flex items-center gap-3 mt-1 text-[11px]" style={{ color: `${INK}66` }}>
-                            <span>{quiz.subject}</span><span>{quiz.questions} questions</span>
+                  {quizzes.length > 0 ? (
+                    quizzes.map((quiz) => (
+                      <Card key={quiz.id} style={{ backgroundColor: CARD }}>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium">{quiz.title}</p>
+                            <div className="flex items-center gap-3 mt-1 text-[11px]" style={{ color: `${INK}66` }}>
+                              <span>{quiz.subject}</span>
+                              <span>{quiz.questions} questions</span>
+                              {quiz.completed && quiz.score > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <span style={{ color: getScoreColor(quiz.score) }}>Score: {quiz.score}%</span>
+                                </span>
+                              )}
+                            </div>
                           </div>
+                          {quiz.completed ? (
+                            <div className="flex items-center gap-2">
+                              <span style={{ fontFamily: FONT_MONO, fontWeight: 700, color: getScoreColor(quiz.score) }}>
+                                {quiz.score}%
+                              </span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ fontFamily: FONT_MONO, color: MOSS, backgroundColor: `${MOSS}14` }}>
+                                ✓ Done
+                              </span>
+                              <Stamp accent={MOSS} onClick={() => handleStartQuiz(quiz.id)}>
+                                Retake
+                              </Stamp>
+                            </div>
+                          ) : (
+                            <Stamp accent={MOSS} onClick={() => handleStartQuiz(quiz.id)}>
+                              Start Quiz
+                            </Stamp>
+                          )}
                         </div>
-                        {quiz.completed ? (
-                          <div className="flex items-center gap-2">
-                            <span style={{ fontFamily: FONT_MONO, fontWeight: 700, color: getScoreColor(quiz.score) }}>{quiz.score}%</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ fontFamily: FONT_MONO, color: MOSS, backgroundColor: `${MOSS}14` }}>Done</span>
-                          </div>
-                        ) : <Stamp accent={MOSS}>Start</Stamp>}
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    ))
+                  ) : (
+                    <p className="text-sm text-center py-4" style={{ color: '#1C2B3980' }}>
+                      No quizzes available. Start studying to unlock quizzes!
+                    </p>
+                  )}
                 </div>
+              </div>
+
+              {/* Full StudyTracker Component */}
+              <div className="mt-8 pt-8 border-t" style={{ borderColor: `${INK}14` }}>
+                <StudyTracker user={user} />
               </div>
             </div>
           )}
@@ -497,6 +574,7 @@ const StudentDashboard = ({ user }) => {
           {/* Health Tab */}
           {activeTab === 'health' && (
             <div className="space-y-6">
+              {/* Quick Stats */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard icon={<Dumbbell className="w-5 h-5" />} value={streaks.workout} label="Workout Streak" accent={SLATE} />
                 <StatCard icon={<Droplets className="w-5 h-5" />} value="1.8L" label="Water Intake" accent={SLATE} />
@@ -504,6 +582,7 @@ const StudentDashboard = ({ user }) => {
                 <StatCard icon={<Zap className="w-5 h-5" />} value={3} label="Workouts This Week" accent={BRASS} />
               </div>
 
+              {/* Workout Programs */}
               <div>
                 <div className="flex flex-wrap items-center gap-3 mb-1">
                   <SectionHeading eyebrow="Programs" title="Workouts" accent={SLATE} />
@@ -541,6 +620,7 @@ const StudentDashboard = ({ user }) => {
                 </div>
               </div>
 
+              {/* Video Tutorials */}
               <div>
                 <SectionHeading eyebrow="Watch" title="Tutorials" accent={REDINK} />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -559,6 +639,7 @@ const StudentDashboard = ({ user }) => {
                 </div>
               </div>
 
+              {/* Nutrition */}
               <div>
                 <SectionHeading eyebrow="Guidance" title="Nutrition &amp; Hydration" accent={SLATE} />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -586,12 +667,18 @@ const StudentDashboard = ({ user }) => {
                   </Card>
                 </div>
               </div>
+
+              {/* Full HealthTracker Component */}
+              <div className="mt-8 pt-8 border-t" style={{ borderColor: `${INK}14` }}>
+                <HealthTracker user={user} />
+              </div>
             </div>
           )}
 
           {/* Habits Tab */}
           {activeTab === 'habits' && (
             <div className="space-y-6">
+              {/* Header */}
               <div className="flex justify-between items-end">
                 <SectionHeading eyebrow="Daily Ritual" title="Habit Tracker" accent={REDINK} />
                 <div className="flex items-center gap-4 mb-5">
@@ -599,6 +686,8 @@ const StudentDashboard = ({ user }) => {
                   <span className="text-sm flex items-center gap-1" style={{ color: BRASS, fontFamily: FONT_MONO }}><Flame className="w-4 h-4" /> {streaks.habit}d</span>
                 </div>
               </div>
+
+              {/* Daily Habits */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {dailyHabits.map((habit) => {
                   const done = completedHabits.includes(habit.id);
@@ -620,6 +709,8 @@ const StudentDashboard = ({ user }) => {
                   );
                 })}
               </div>
+
+              {/* Weekly Progress */}
               <Card style={{ backgroundColor: `${REDINK}0A`, borderColor: `${REDINK}26` }}>
                 <h5 className="text-xs mb-3" style={{ fontFamily: FONT_MONO, color: `${INK}80`, letterSpacing: '0.06em' }}>WEEKLY PROGRESS</h5>
                 <div className="flex items-end gap-2 h-20">
@@ -631,6 +722,11 @@ const StudentDashboard = ({ user }) => {
                   ))}
                 </div>
               </Card>
+
+              {/* Full HabitTracker Component */}
+              <div className="mt-8 pt-8 border-t" style={{ borderColor: `${INK}14` }}>
+                <HabitTracker user={user} />
+              </div>
             </div>
           )}
 
@@ -676,6 +772,21 @@ const StudentDashboard = ({ user }) => {
           )}
         </div>
       </div>
+
+      {/* Quiz Modal */}
+      {showQuizModal && selectedQuiz && (
+        <QuizModal
+          quiz={selectedQuiz}
+          onClose={() => {
+            setShowQuizModal(false);
+            setSelectedQuiz(null);
+            fetchQuizzes(); // Refresh quizzes after closing
+          }}
+          onComplete={() => {
+            fetchQuizzes(); // Refresh quizzes after completion
+          }}
+        />
+      )}
     </div>
   );
 };

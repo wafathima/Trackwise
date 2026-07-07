@@ -11,6 +11,10 @@ import HealthModule from './components/HealthModule';
 import HabitsModule from './components/HabitsModule';
 import ProfilePage from './components/ProfilePage';
 import HelpSupport from './components/HelpSupport';
+import StudentProfile from './components/StudentProfile';
+import MentorProfile from './components/MentorProfile';
+import ParentProfile from './components/ParentProfile';
+import TeacherProfile from './components/TeacherProfile';
 
 
 import AdminLogin from './pages/admin/AdminLogin';
@@ -30,8 +34,15 @@ function App() {
         <Route path="/features/studies" element={<StudiesModule />} />
         <Route path="/features/health" element={<HealthModule />} />
         <Route path="/features/habits" element={<HabitsModule />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        {/* <Route path="/profile" element={<ProfilePage />} /> */}
         <Route path="/help-support" element={<HelpSupport />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/student" element={<StudentProfile />} />
+          <Route path="/profile/parent" element={<ParentProfile />} />
+          <Route path="/profile/teacher" element={<TeacherProfile />} />
+          <Route path="/profile/mentor" element={<MentorProfile />} />
+
+
 
         {/* Admin Routes */}
         <Route path="/admin/login" element={<AdminLogin />} />

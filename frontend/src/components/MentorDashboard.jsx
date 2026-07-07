@@ -19,9 +19,7 @@ import {
   Eye
 } from 'lucide-react';
 
-/* ---------------------------------------------------------------------- */
-/*  TOKENS                                                                 */
-/* ---------------------------------------------------------------------- */
+
 const INK = '#1C2B39';
 const PAPER = '#F1EBDA';
 const CARD = '#FBF8EF';
@@ -50,10 +48,7 @@ const TAB_ICONS = {
   mentees: <Users className="w-3.5 h-3.5" />
 };
 
-/* ---------------------------------------------------------------------- */
-/*  MENTOR DASHBOARD                                                       */
-/* ---------------------------------------------------------------------- */
-const MentorDashboard = ({ user }) => {
+  const MentorDashboard = ({ user }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [mentees, setMentees] = useState([]);
   const [loading, setLoading] = useState(true);
